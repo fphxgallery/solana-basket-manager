@@ -128,25 +128,8 @@ sudo systemctl status basket-manager
 
 ### v2.0.1
 - Fix `parseInt` precision on large Jupiter `outAmount` values (use `Number(BigInt(...))`)
-- Remove `JUPITER_API_KEY` prompt from installer — no longer used
-- Remove unused `cors` dependency
-- Fix stale "ARB AGENT" label on login screen and installer banner
-- Rename `package.json` name from `arb-agent` to `solana-basket-manager`
-
-### v2.0.0
-- Remove arbitrage engine — pure basket portfolio manager
-- Rename repo/service/cookie to `basket-manager`
-- Add dynamic USDC profit-taking curve
-- Add USD-denominated PnL tracking and 24h portfolio chart
-- Basket refresh every 3 min; rebalance check every 5 min
-
-### v1.1.1
-- Net profit calc: subtract Jito tip + signature fees from arb threshold
-- Fix NaN price impact bypass, basket weight validation, dead export
-
-### v1.1.0
-- Require API token auth on all endpoints (cookie + bearer)
-- Docker binds `127.0.0.1` by default
+- Remove unused installer prompts and dead dependencies
+- Fix stale labels; rename `package.json` name to `solana-basket-manager`
 
 ## License
 
