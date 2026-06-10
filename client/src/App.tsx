@@ -336,7 +336,7 @@ function Dashboard() {
       body: JSON.stringify({ token: telegramToken.trim(), chatId: telegramChatId.trim() }),
     });
     if (r.ok) {
-      const d = await r.json() as { configured: boolean; chatId?: string };
+      const d = await r.json() as { configured: boolean; chatId?: string; reportEnabled: boolean; reportTime: string | null };
       setTelegram(d);
       setTelegramToken("");
       setTelegramChatId("");
@@ -348,7 +348,7 @@ function Dashboard() {
 
   async function disconnectTelegram() {
     await fetch("/api/telegram", { method: "DELETE" });
-    setTelegram({ configured: false });
+    setTelegram({ configured: false, reportEnabled: false, reportTime: null });
   }
 
   async function testTelegram() {
