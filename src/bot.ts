@@ -12,14 +12,6 @@ let rebalancing = false;
 let connection: Connection | null = null;
 let keypair: Keypair | null = null;
 
-async function refreshBalance() {
-  if (!connection || !keypair) return;
-  try {
-    const lamports = await connection.getBalance(keypair.publicKey);
-    store.setWalletBalance(lamports / 1e9);
-  } catch { /* non-fatal */ }
-}
-
 async function refreshBasket() {
   if (!connection || !keypair) return;
   try {
@@ -41,7 +33,6 @@ async function tryRebalance() {
   try {
     await executeRebalance(connection, keypair);
     await refreshBasket();
-    await refreshBalance();
   } catch (e) {
     console.error("[bot] rebalance failed:", e);
   } finally {
@@ -63,15 +54,11 @@ export function startBot() {
   store.setBotState({ running: true, startedAt: Date.now(), error: null });
   console.log("[bot] started —", keypair.publicKey.toBase58());
 
-  balanceTimer = setInterval(async () => {
-    await refreshBalance();
-    await refreshBasket();
-  }, 3 * 60_000); // 3 min — basket pricing makes N quote calls, keep off lite API rate limit
+  balanceTimer = setInterval(() => refreshBasket().catch(console.error), 3 * 60_000); // 3 min
 
   // Check rebalance every 5 minutes
   rebalanceTimer = setInterval(() => tryRebalance().catch(console.error), 5 * 60_000);
 
-  refreshBalance();
   refreshBasket();
 }
 
@@ -101,7 +88,6 @@ export async function forceRebalance(): Promise<void> {
   try {
     await executeRebalance(connection, keypair);
     await refreshBasket();
-    await refreshBalance();
   } finally {
     rebalancing = false;
   }

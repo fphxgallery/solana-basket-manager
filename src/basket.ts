@@ -166,8 +166,12 @@ export async function refreshHoldings(
   const { tokens } = basketStore.config;
   if (!tokens.length) return;
 
-  const mints = tokens.map((t) => t.mint);
+  // Always include WSOL so we get native SOL balance for the wallet display
+  const mints = [...new Set([...tokens.map((t) => t.mint), WSOL])];
   const balances = await fetchBalances(connection, walletPk, mints);
+
+  // Update wallet balance from the SOL balance already fetched — avoids a redundant getBalance call
+  if (balances[WSOL]) store.setWalletBalance(balances[WSOL].uiAmount);
 
   // Derive SOL value sequentially (not parallel) to avoid 429 rate limits.
   // Falls back to cached price if the quote fails.
@@ -332,9 +336,9 @@ export async function executeRebalance(
       outputSol: 0,
     };
 
-    try {
-      if (swap.rawAmount < 1_000n) continue; // skip dust
+    if (swap.rawAmount < 1_000n) continue; // skip dust — before addTrade to avoid phantom pending entries
 
+    try {
       store.addTrade(tradeRecord);
 
       // Stagger rebalance swaps — not latency-sensitive
