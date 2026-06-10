@@ -5,6 +5,11 @@ import path from "path";
 const apiKey = process.env.HELIUS_API_KEY;
 if (!apiKey) throw new Error("HELIUS_API_KEY missing from .env");
 
+const apiToken = process.env.API_TOKEN;
+if (!apiToken || apiToken.length < 16) {
+  throw new Error("API_TOKEN missing or too short (min 16 chars) — generate one with: openssl rand -hex 32");
+}
+
 const DEFAULT_TOKEN = "6gx6Ph2ek73kF6EWDrG4GQ54pcLJB6CYpATuRyxKXumo";
 const WSOL  = "So11111111111111111111111111111111111111112";
 const USDC  = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
@@ -56,6 +61,8 @@ export function saveRuntimeConfig() {
 export const CONFIG = {
   WSOL_MINT: WSOL,
   USDC_MINT: USDC,
+
+  API_TOKEN: apiToken,
 
   HELIUS_API_KEY: apiKey,
   RPC_URL: `https://mainnet.helius-rpc.com/?api-key=${apiKey}`,

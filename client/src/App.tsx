@@ -152,7 +152,75 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
+function Login({ onSuccess }: { onSuccess: () => void }) {
+  const [token, setToken] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token.trim()) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: token.trim() }),
+      });
+      if (res.ok) onSuccess();
+      else setError("Invalid token");
+    } catch {
+      setError("Request failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-950 flex items-center justify-center p-4">
+      <form onSubmit={submit} className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-6 shadow-2xl">
+        <div className="flex items-center gap-2 mb-4">
+          <KeyRound className="w-4 h-4 text-violet-400" />
+          <span className="text-sm font-semibold text-white">ARB AGENT — sign in</span>
+        </div>
+        <input
+          type="password"
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          placeholder="API token"
+          autoFocus
+          className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-violet-500 mb-3"
+        />
+        {error && <div className="text-xs text-red-400 mb-3">{error}</div>}
+        <button
+          type="submit"
+          disabled={busy || !token.trim()}
+          className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white text-sm font-medium rounded-lg py-2 transition-colors"
+        >
+          {busy ? "Checking…" : "Sign in"}
+        </button>
+        <p className="text-xs text-gray-500 mt-3">Token is the API_TOKEN value from the server .env file.</p>
+      </form>
+    </div>
+  );
+}
+
 export default function App() {
+  const [authed, setAuthed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/check")
+      .then((r) => setAuthed(r.ok))
+      .catch(() => setAuthed(false));
+  }, []);
+
+  if (authed === null) return null;
+  if (!authed) return <Login onSuccess={() => setAuthed(true)} />;
+  return <Dashboard />;
+}
+
+function Dashboard() {
   const [state, setState] = useState<AppState | null>(null);
   const [connected, setConnected] = useState(false);
   const [arbAmountInput, setArbAmountInput] = useState("");

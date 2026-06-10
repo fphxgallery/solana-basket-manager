@@ -11,6 +11,7 @@ Self-hosted Solana arbitrage bot with a token basket manager. Runs Jupiter arb c
 - **Dynamic USDC profit-taking** — USDC target weight shifts automatically based on basket PnL%
 - **PnL tracking** — SOL and USD baseline, 24h portfolio chart
 - **Live dashboard** — React + Tailwind UI with SSE updates, trade log, spread monitor, wallet management
+- **Token-protected API** — all endpoints require an auth token (cookie or bearer); dashboard has a sign-in screen
 - **Configurable at runtime** — arb token mint, sizing, profit threshold, basket weights — no restart needed
 
 ## Requirements
@@ -30,18 +31,20 @@ bash install.sh
 
 The installer will:
 1. Install Node.js 22 via nvm if not present
-2. Prompt for API keys and create `.env`
+2. Prompt for API keys, generate a dashboard auth token, and create `.env`
 3. Install dependencies and build server + client
 4. Register and start `arb-agent.service` via systemd
 
-Open the dashboard at `http://<server-ip>:3420`.
+Open the dashboard at `http://<server-ip>:3420` and sign in with the token the installer printed (the `API_TOKEN` value in `.env`).
 
 ## Quick Start (Docker)
 
 ```bash
-cp .env.example .env   # fill in API keys
+cp .env.example .env   # fill in API keys + generate API_TOKEN
 docker compose up -d
 ```
+
+By default Docker binds to `127.0.0.1` only. Set `BIND_ADDR=0.0.0.0` in `.env` for LAN access.
 
 ## Configuration
 
@@ -50,7 +53,9 @@ docker compose up -d
 ```env
 HELIUS_API_KEY=your_helius_key
 JUPITER_API_KEY=your_jupiter_key   # optional
+API_TOKEN=...                      # required — openssl rand -hex 32
 PORT=3420
+#BIND_ADDR=0.0.0.0                 # Docker only — default 127.0.0.1
 ```
 
 ### Dashboard — Config panel
@@ -79,6 +84,7 @@ Rebalance settings (also in dashboard):
 ```
 src/
   index.ts        — Express server entry
+  auth.ts         — API token auth (cookie / bearer)
   bot.ts          — main loop, timers, arb + rebalance orchestration
   jupiter.ts      — quote circuits, spread cache, arb opportunity detection
   executor.ts     — Jito bundle assembly and submission
@@ -124,7 +130,9 @@ sudo systemctl status arb-agent
 ## Security Notes
 
 - Wallet keypair is a **hot wallet** — only fund it with what you're willing to arb with
-- Dashboard has no authentication — bind to LAN or use SSH tunnel if exposed
+- All API routes require `API_TOKEN` (HttpOnly cookie via dashboard sign-in, or `Authorization: Bearer` header)
+- Docker binds `127.0.0.1` by default; prefer an SSH tunnel over `BIND_ADDR=0.0.0.0` when possible
+- Traffic is plain HTTP — put a reverse proxy with TLS in front if exposing beyond localhost/LAN
 - `.env` and `wallet/` are gitignored and never committed
 
 ## License

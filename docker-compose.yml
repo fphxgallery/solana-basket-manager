@@ -7,9 +7,11 @@ services:
     build: .
     restart: unless-stopped
     ports:
-      - "3420:3420"
+      # Default: localhost only. For LAN access set BIND_ADDR=0.0.0.0 in .env
+      # (API is token-protected, but prefer an SSH tunnel when possible).
+      - "${BIND_ADDR:-127.0.0.1}:3420:3420"
     volumes:
-      # Mount your keypair directory (read-only)
+      # Mount your keypair directory (writable — wallet create/import writes here)
       - ${WALLET_DIR:-wallet}:/app/wallet
       - data:/app/data
     env_file:

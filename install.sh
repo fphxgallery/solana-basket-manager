@@ -40,12 +40,27 @@ if [ ! -f "$INSTALL_DIR/.env" ]; then
   echo ""
   read -rp "    HELIUS_API_KEY: " helius_key
   read -rp "    JUPITER_API_KEY (leave blank if none): " jupiter_key
+  api_token="$(openssl rand -hex 32)"
   cat > "$INSTALL_DIR/.env" <<EOF
 HELIUS_API_KEY=$helius_key
 JUPITER_API_KEY=$jupiter_key
+API_TOKEN=$api_token
 PORT=3420
 EOF
   echo "    .env created."
+  echo ""
+  echo "    Dashboard sign-in token (save this):"
+  echo "    $api_token"
+fi
+
+# Upgrade path: existing .env without API_TOKEN (added in v1.1.0)
+if ! grep -q "^API_TOKEN=" "$INSTALL_DIR/.env"; then
+  api_token="$(openssl rand -hex 32)"
+  printf '\n# Web UI / API auth token (added by installer)\nAPI_TOKEN=%s\n' "$api_token" >> "$INSTALL_DIR/.env"
+  echo ""
+  echo "==> Generated API_TOKEN and added it to .env."
+  echo "    Dashboard sign-in token (save this):"
+  echo "    $api_token"
 fi
 
 # ── Install dependencies ───────────────────────────────────────────────────────
