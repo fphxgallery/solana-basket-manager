@@ -3,7 +3,7 @@ volumes:
   data:
 
 services:
-  arb-agent:
+  basket-manager:
     build: .
     restart: unless-stopped
     ports:

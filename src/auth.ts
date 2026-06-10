@@ -2,7 +2,7 @@ import crypto from "crypto";
 import type { Request, Response, NextFunction } from "express";
 import { CONFIG } from "./config.js";
 
-const COOKIE_NAME = "arb_auth";
+const COOKIE_NAME = "basket_auth";
 const COOKIE_MAX_AGE_S = 30 * 24 * 3600;
 
 function tokenMatches(candidate: string): boolean {

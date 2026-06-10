@@ -22,8 +22,8 @@ Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at targ
 ## Quick Start (systemd)
 
 ```bash
-git clone https://github.com/fphxgallery/solana-basket-arbitrage
-cd solana-basket-arbitrage
+git clone https://github.com/fphxgallery/solana-basket-manager
+cd solana-basket-manager
 bash install.sh
 ```
 
@@ -31,7 +31,7 @@ The installer will:
 1. Install Node.js 22 via nvm if not present
 2. Prompt for API keys, generate a dashboard auth token, and create `.env`
 3. Install dependencies and build server + client
-4. Register and start `arb-agent.service` via systemd
+4. Register and start `basket-manager.service` via systemd
 
 Open the dashboard at `http://<server-ip>:3420` and sign in with the token the installer printed (the `API_TOKEN` value in `.env`).
 
@@ -98,13 +98,13 @@ All runtime data lives in `data/` (excluded from git):
 
 ```bash
 # Logs
-journalctl -u arb-agent -f
+journalctl -u basket-manager -f
 
 # Restart
-sudo systemctl restart arb-agent
+sudo systemctl restart basket-manager
 
 # Status
-sudo systemctl status arb-agent
+sudo systemctl status basket-manager
 ```
 
 ## Security Notes
