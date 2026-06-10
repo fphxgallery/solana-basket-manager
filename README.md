@@ -4,6 +4,8 @@ Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at targ
 
 ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
+![Dashboard screenshot](docs/screenshot.png)
+
 ## Features
 
 - **Token basket** — hold any SPL/Token-2022 tokens at target weights; auto-rebalances on drift or schedule via Jupiter swaps
