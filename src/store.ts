@@ -1,4 +1,26 @@
 import { EventEmitter } from "events";
+import fs from "fs";
+import path from "path";
+
+const TRADES_PATH = path.resolve(process.env.DATA_DIR ?? "./data", "trades.json");
+
+function loadTrades(): TradeRecord[] {
+  try {
+    if (fs.existsSync(TRADES_PATH)) {
+      return JSON.parse(fs.readFileSync(TRADES_PATH, "utf-8")) as TradeRecord[];
+    }
+  } catch { /* start fresh on corrupt file */ }
+  return [];
+}
+
+function saveTrades(trades: TradeRecord[]) {
+  try {
+    fs.mkdirSync(path.dirname(TRADES_PATH), { recursive: true });
+    fs.writeFileSync(TRADES_PATH, JSON.stringify(trades));
+  } catch (e) {
+    console.error("[store] save trades failed:", e);
+  }
+}
 
 export interface TradeRecord {
   id: string;
@@ -30,15 +52,28 @@ export interface StoreSnapshot {
 const MAX_TRADES = 100;
 
 class Store extends EventEmitter {
-  trades: TradeRecord[] = [];
+  trades: TradeRecord[];
   botState: BotState = { running: false, startedAt: null, error: null };
   totalProfitSol = 0;
   totalTrades = 0;
   walletBalanceSol: number | null = null;
 
+  constructor() {
+    super();
+    this.trades = loadTrades();
+    // Recompute totals from persisted trades
+    for (const t of this.trades) {
+      if (t.status === "confirmed") {
+        this.totalTrades++;
+        this.totalProfitSol += t.profitSol;
+      }
+    }
+  }
+
   addTrade(trade: TradeRecord) {
     this.trades.unshift(trade);
     if (this.trades.length > MAX_TRADES) this.trades.pop();
+    saveTrades(this.trades);
     this.emit("update", "trade", trade);
   }
 
@@ -51,6 +86,7 @@ class Store extends EventEmitter {
       this.totalTrades++;
       this.totalProfitSol += t.profitSol;
     }
+    saveTrades(this.trades);
     this.emit("update", "trade", t);
   }
 

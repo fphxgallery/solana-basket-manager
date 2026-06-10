@@ -94,6 +94,7 @@ All runtime data lives in `data/` (excluded from git):
 |---|---|
 | `data/basket.json` | token list, weights, settings, price cache, PnL baseline |
 | `data/value-history.json` | 24h portfolio value snapshots |
+| `data/trades.json` | rebalance trade log (persists across restarts) |
 | `wallet/keypair.json` | hot wallet keypair — **back this up** |
 
 ## Useful Commands
@@ -118,6 +119,12 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v2.1.2
+- Fix swap confirmation: on timeout, poll `getSignatureStatus` once (5s delay) before marking failed — prevents false-failed rebalance swaps on slow confirmation
+- Fix HWM disk writes: `updateHwm` only writes on a genuinely new peak, not on every 3-min refresh at steady-state
+- Fix buy swaps: reserve 0.01 SOL for gas across all buy swaps in a rebalance pass; buys skip if budget exhausted
+- Persist rebalance trade log to `data/trades.json` — log survives service restarts; totals recomputed from disk on startup
 
 ### v2.1.1
 - Add **Dynamic Weight** tab — dedicated UI for the profit-taking curve and high-water mark settings

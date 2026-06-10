@@ -215,7 +215,10 @@ export async function refreshHoldings(
       let effectiveHwm: number;
       if (hwm == null || hwmCapturedAt == null || totalValueUsd >= hwm) {
         effectiveHwm = totalValueUsd;
-        basketStore.updateHwm(totalValueUsd);
+        // Only write when it's a genuine new peak — avoids a disk write every 3-min refresh at steady state
+        if (hwm == null || hwmCapturedAt == null || totalValueUsd > hwm) {
+          basketStore.updateHwm(totalValueUsd);
+        }
       } else {
         const elapsedDays = (Date.now() - hwmCapturedAt) / 86_400_000;
         const decayedGap = (hwm - totalValueUsd) * Math.pow(0.5, elapsedDays / basketStore.config.hwmHalfLifeDays);
@@ -309,11 +312,17 @@ export async function executeRebalance(
     const rawAmount = BigInt(h.rawAmount) * BigInt(Math.floor(excessFraction * 1_000_000)) / 1_000_000n;
     swaps.push({ inputMint: h.mint, outputMint: WSOL, rawAmount, displaySol: excessSol });
   }
+  // Reserve SOL for gas fees across all buy swaps (priority fee + sig cost per swap)
+  const GAS_RESERVE_SOL = 0.01;
+  let solBudget = Math.max(0, (store.walletBalanceSol ?? 0) - GAS_RESERVE_SOL);
   for (const h of buys) {
     const deficitSol = (Math.abs(h.driftPct) / 100) * totalValueSol;
+    const buyAmount = Math.min(deficitSol, solBudget);
+    if (buyAmount <= 0) continue;
+    solBudget -= buyAmount;
     // Buying with SOL: input is WSOL, amount in lamports (9 decimals)
-    const rawAmount = BigInt(Math.floor(deficitSol * 1e9));
-    swaps.push({ inputMint: WSOL, outputMint: h.mint, rawAmount, displaySol: deficitSol });
+    const rawAmount = BigInt(Math.floor(buyAmount * 1e9));
+    swaps.push({ inputMint: WSOL, outputMint: h.mint, rawAmount, displaySol: buyAmount });
   }
 
   if (!swaps.length) {
@@ -440,10 +449,27 @@ export async function executeRebalance(
           store.updateTradeStatus(tradeId, "confirmed");
           results.push({ label: swapLabel, sol: swap.displaySol, status: "confirmed" });
         }
-      } catch (confirmErr) {
-        console.warn(`[basket] confirmation timeout for ${sig}:`, confirmErr);
-        store.updateTradeStatus(tradeId, "failed");
-        results.push({ label: swapLabel, sol: swap.displaySol, status: "failed" });
+      } catch {
+        // confirmTransaction timed out — the tx may still land. Poll once before giving up.
+        console.warn(`[basket] confirmation timeout for ${sig} — polling status once`);
+        try {
+          await new Promise((r) => setTimeout(r, 5000));
+          const { value } = await connection.getSignatureStatus(sig);
+          const conf = value?.confirmationStatus;
+          if (conf === "confirmed" || conf === "finalized") {
+            console.log(`[basket] swap confirmed (late): ${sig}`);
+            store.updateTradeStatus(tradeId, "confirmed");
+            results.push({ label: swapLabel, sol: swap.displaySol, status: "confirmed" });
+          } else {
+            console.warn(`[basket] swap status unknown after poll (${conf ?? "null"}): ${sig}`);
+            store.updateTradeStatus(tradeId, "failed");
+            results.push({ label: swapLabel, sol: swap.displaySol, status: "failed" });
+          }
+        } catch (pollErr) {
+          console.error(`[basket] status poll failed for ${sig}:`, pollErr);
+          store.updateTradeStatus(tradeId, "failed");
+          results.push({ label: swapLabel, sol: swap.displaySol, status: "failed" });
+        }
       }
     } catch (e) {
       console.error("[basket] swap failed:", e);
