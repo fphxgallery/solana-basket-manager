@@ -119,6 +119,12 @@ sudo systemctl status basket-manager
 
 ## Changelog
 
+### v2.1.0
+- Add high-water mark profit lock for dynamic USDC weight — USDC target weight locks in at portfolio peaks and releases gradually via configurable exponential decay (default 7-day half-life)
+- Configurable from dashboard: toggle + half-life input in Basket Settings panel
+- HWM state (`hwmValueUsd`, `hwmCapturedAt`) persisted in `data/basket.json`, survives restarts
+- Baseline reset does not affect HWM — profit lock persists through deposits
+
 ### v2.0.3
 - Add Telegram notifications — bot start/stop and rebalance summary (per-swap confirmed/failed)
 - Configurable from the dashboard UI (TELEGRAM card); token stored in `data/telegram.json`, never exposed via API
