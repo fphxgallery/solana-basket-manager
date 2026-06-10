@@ -120,6 +120,9 @@ sudo systemctl status basket-manager
 
 ## Changelog
 
+### v2.1.4
+- Fix TypeScript build error: `saveTelegram` and `disconnectTelegram` now include `reportEnabled`/`reportTime` in state updates to match the extended telegram state type added in v2.1.3
+
 ### v2.1.3
 - Add daily Telegram report — sends portfolio value (USD + SOL), P&L, and per-token current/target weights
 - New **Daily Report** card in the dashboard (below Telegram settings) with enable toggle, time picker (server local time), and Send Report Now button
