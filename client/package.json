@@ -1,6 +1,6 @@
 {
   "name": "arb-agent-client",
-  "version": "2.0.0",
+  "version": "2.1.6",
   "private": true,
   "type": "module",
   "scripts": {
