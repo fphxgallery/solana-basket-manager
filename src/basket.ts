@@ -95,7 +95,7 @@ async function fetchValueSol(mint: string, rawAmount: string): Promise<number> {
       }
       if (!res.ok) return 0;
       const q = (await res.json()) as { outAmount?: string };
-      return q.outAmount ? parseInt(q.outAmount) / 1e9 : 0;
+      return q.outAmount ? Number(BigInt(q.outAmount)) / 1e9 : 0;
     } catch {
       // Transient network error — retry like a 429 instead of giving up
       await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
@@ -363,7 +363,7 @@ export async function executeRebalance(
 
       const quote = (await qRes.json()) as JupiterQuote;
       const outAmountSol = swap.outputMint === WSOL
-        ? parseInt(quote.outAmount) / 1e9
+        ? Number(BigInt(quote.outAmount)) / 1e9
         : swap.displaySol;
 
       // Build swap tx via lite API (no key needed)

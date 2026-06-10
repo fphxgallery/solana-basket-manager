@@ -174,7 +174,7 @@ function Login({ onSuccess }: { onSuccess: () => void }) {
       <form onSubmit={submit} className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-6 shadow-2xl">
         <div className="flex items-center gap-2 mb-4">
           <KeyRound className="w-4 h-4 text-violet-400" />
-          <span className="text-sm font-semibold text-white">ARB AGENT — sign in</span>
+          <span className="text-sm font-semibold text-white">BASKET MANAGER — sign in</span>
         </div>
         <input
           type="password"

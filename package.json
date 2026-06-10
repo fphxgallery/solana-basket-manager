@@ -1,6 +1,6 @@
 {
-  "name": "arb-agent",
-  "version": "2.0.0",
+  "name": "solana-basket-manager",
+  "version": "2.0.1",
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
@@ -13,13 +13,11 @@
   "dependencies": {
     "@solana/web3.js": "^1.98.0",
     "bs58": "^6.0.0",
-    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.0",
     "ws": "^8.18.0"
   },
   "devDependencies": {
-    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.0.0",
     "@types/ws": "^8.5.12",

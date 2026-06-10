@@ -12,7 +12,7 @@ SERVICE_DEST="/etc/systemd/system/basket-manager.service"
 USER="$(whoami)"
 NODE_BIN="$(command -v node 2>/dev/null || true)"
 
-echo "==> Arb Agent Installer"
+echo "==> Basket Manager Installer"
 echo "    Install dir : $INSTALL_DIR"
 echo "    Running as  : $USER"
 echo ""
@@ -39,11 +39,9 @@ if [ ! -f "$INSTALL_DIR/.env" ]; then
   echo "    You'll need your API keys handy."
   echo ""
   read -rp "    HELIUS_API_KEY: " helius_key
-  read -rp "    JUPITER_API_KEY (leave blank if none): " jupiter_key
   api_token="$(openssl rand -hex 32)"
   cat > "$INSTALL_DIR/.env" <<EOF
 HELIUS_API_KEY=$helius_key
-JUPITER_API_KEY=$jupiter_key
 API_TOKEN=$api_token
 PORT=3420
 EOF
