@@ -1,11 +1,11 @@
-// Tracks portfolio value (USD) over the last 24 hours.
+// Tracks portfolio value (USD) over the last 30 days.
 // SOL/USD price fetched from CoinGecko every ~3 minutes.
 // History persisted to data/value-history.json so restarts don't wipe the chart.
 
 import fs from "fs";
 import path from "path";
 
-const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+const THIRTY_DAYS = 30 * 24 * 60 * 60 * 1000;
 const COINGECKO_URL =
   "https://api.coingecko.com/api/v3/simple/price?ids=solana&vs_currencies=usd";
 
@@ -19,12 +19,12 @@ export interface ValuePoint {
 let solUsd = 0;
 let lastPriceFetch = 0;
 
-// Load persisted history on startup, pruning anything older than 24h
+// Load persisted history on startup, pruning anything older than 30 days
 export const valueHistory: ValuePoint[] = (() => {
   try {
     if (fs.existsSync(DATA_PATH)) {
       const raw = JSON.parse(fs.readFileSync(DATA_PATH, "utf-8")) as ValuePoint[];
-      const cutoff = Date.now() - TWENTY_FOUR_HOURS;
+      const cutoff = Date.now() - THIRTY_DAYS;
       return raw.filter((p) => p.ts >= cutoff);
     }
   } catch { /* start fresh on corrupt file */ }
@@ -68,8 +68,8 @@ export async function recordSnapshot(totalValueSol: number): Promise<void> {
   const now = Date.now();
   valueHistory.push({ ts: now, valueUsd: totalValueSol * usd });
 
-  // Prune entries older than 24h
-  const cutoff = now - TWENTY_FOUR_HOURS;
+  // Prune entries older than 30 days
+  const cutoff = now - THIRTY_DAYS;
   while (valueHistory.length > 0 && valueHistory[0].ts < cutoff) {
     valueHistory.shift();
   }

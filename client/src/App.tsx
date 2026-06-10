@@ -242,6 +242,7 @@ function Dashboard() {
   const [rebalanceMsg, setRebalanceMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [valueHistory, setValueHistory] = useState<ValuePoint[]>([]);
   const [solUsd, setSolUsd] = useState<number>(0);
+  const [valueWindow, setValueWindow] = useState<"24h" | "7d" | "30d">("24h");
   const [telegram, setTelegram] = useState<{ configured: boolean; chatId?: string; reportEnabled: boolean; reportTime: string | null } | null>(null);
   const [telegramToken, setTelegramToken] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");
@@ -671,21 +672,39 @@ function Dashboard() {
     },
   };
 
-  // ── Line chart data (24h portfolio value in USD) ──────────────────────────────
+  // ── Line chart data (portfolio value, filtered by valueWindow) ───────────────
   const lineData = (() => {
     if (!valueHistory.length) return null;
+
+    const windowMs = valueWindow === "30d" ? 30 * 864e5 : valueWindow === "7d" ? 7 * 864e5 : 864e5;
+    const cutoff = Date.now() - windowMs;
+    const filtered = valueHistory.filter((p) => p.ts >= cutoff);
+    if (!filtered.length) return null;
+
+    // Downsample for display: 7d → every 5th point, 30d → every 20th point
+    const step = valueWindow === "30d" ? 20 : valueWindow === "7d" ? 5 : 1;
+    const points = step === 1 ? filtered : filtered.filter((_, i) => i % step === 0 || i === filtered.length - 1);
+
+    const labels = points.map((p) => {
+      const d = new Date(p.ts);
+      if (valueWindow === "30d") {
+        return d.toLocaleDateString([], { month: "short", day: "numeric" });
+      }
+      if (valueWindow === "7d") {
+        return d.toLocaleDateString([], { weekday: "short", hour: "2-digit", minute: "2-digit" });
+      }
+      return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    });
+
     return {
-      labels: valueHistory.map((p) => {
-        const d = new Date(p.ts);
-        return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      }),
+      labels,
       datasets: [{
         label: "Portfolio (USD)",
-        data: valueHistory.map((p) => p.valueUsd),
+        data: points.map((p) => p.valueUsd),
         borderColor: "#8b5cf6",
         backgroundColor: "rgba(139, 92, 246, 0.08)",
         borderWidth: 1.5,
-        pointRadius: valueHistory.length < 20 ? 3 : 0,
+        pointRadius: points.length < 20 ? 3 : 0,
         pointHoverRadius: 4,
         fill: true,
         tension: 0.3,
@@ -788,10 +807,23 @@ function Dashboard() {
               </div>
             </div>
 
-            {/* Line — 24h portfolio value */}
+            {/* Line — portfolio value */}
             <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 flex flex-col">
               <div className="flex items-center justify-between mb-3 flex-shrink-0">
-                <span className="text-xs text-gray-400">PORTFOLIO VALUE (24H)</span>
+                <div className="flex items-center gap-3">
+                  <span className="text-xs text-gray-400">PORTFOLIO VALUE</span>
+                  <div className="flex items-center gap-1">
+                    {(["24h", "7d", "30d"] as const).map((w) => (
+                      <button
+                        key={w}
+                        onClick={() => setValueWindow(w)}
+                        className={`px-1.5 py-0.5 rounded text-xs transition-colors ${valueWindow === w ? "bg-violet-600 text-white" : "text-gray-500 hover:text-gray-300"}`}
+                      >
+                        {w.toUpperCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
                 {solUsd > 0 && (
                   <span className="text-xs text-gray-400">SOL = <span className="text-white">${solUsd.toFixed(2)}</span></span>
                 )}

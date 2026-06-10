@@ -120,6 +120,11 @@ sudo systemctl status basket-manager
 
 ## Changelog
 
+### v2.1.6
+- Portfolio value chart now supports 24H / 7D / 30D windows — toggle buttons in the chart header
+- Value history extended from 24h to 30 days of storage (`data/value-history.json`)
+- Time axis labels adapt per window: HH:MM (24H), Weekday HH:MM (7D), Mon DD (30D)
+
 ### v2.1.5
 - Fix daily report P&L sign: negative P&L now correctly shows `-$X.XX` instead of `$X.XX`
 - Move SOL price onto its own line in the daily report (was appended to the Portfolio line)
