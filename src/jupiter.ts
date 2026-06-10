@@ -125,7 +125,9 @@ async function runCircuit(mints: string[]): Promise<CircuitResult | null> {
   for (let i = 0; i < mints.length - 1; i++) {
     try {
       const q = await fetchQuote(mints[i], mints[i + 1], amount);
-      const impact = Math.abs(parseFloat(q.priceImpactPct ?? "0"));
+      const parsed = Math.abs(parseFloat(q.priceImpactPct ?? "0"));
+      // NaN must reject, not silently pass the threshold comparison
+      const impact = isNaN(parsed) ? Infinity : parsed;
       if (impact > MAX_PRICE_IMPACT_PCT) {
         console.warn(`[jupiter] rejected leg ${i}: price impact ${impact.toFixed(2)}%`);
         return null;

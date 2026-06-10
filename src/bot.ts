@@ -123,11 +123,6 @@ export function stopBot() {
   console.log("[bot] stopped");
 }
 
-/** Called from API to trigger an immediate rebalance. */
-export async function triggerRebalance(): Promise<void> {
-  await tryRebalance();
-}
-
 /** Resubscribe the websocket watcher — needed after TOKEN_MINT changes. */
 export function restartWatcher(): void {
   if (!store.botState.running) return;

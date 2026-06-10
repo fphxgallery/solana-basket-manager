@@ -147,6 +147,28 @@ router.put("/basket/tokens", (req: Request, res: Response) => {
   const { tokens } = req.body as { tokens: BasketToken[] };
   if (!Array.isArray(tokens)) { res.status(400).json({ error: "tokens must be array" }); return; }
 
+  for (const t of tokens) {
+    if (typeof t?.symbol !== "string" || !t.symbol.trim()) {
+      res.status(400).json({ error: "each token needs a symbol" });
+      return;
+    }
+    if (typeof t.targetWeight !== "number" || !(t.targetWeight > 0) || t.targetWeight > 100) {
+      res.status(400).json({ error: `${t.symbol}: targetWeight must be a number in (0, 100]` });
+      return;
+    }
+    try {
+      new PublicKey(String(t.mint));
+    } catch {
+      res.status(400).json({ error: `${t.symbol}: invalid mint address` });
+      return;
+    }
+  }
+  const weightSum = tokens.reduce((s, t) => s + t.targetWeight, 0);
+  if (tokens.length > 0 && Math.abs(weightSum - 100) > 0.01) {
+    res.status(400).json({ error: `weights sum to ${weightSum.toFixed(2)}% — must equal 100%` });
+    return;
+  }
+
   basketStore.setTokens(tokens);
   triggerBasketRefresh().catch(console.error);
   res.json({ ok: true, tokens: basketStore.config.tokens });
