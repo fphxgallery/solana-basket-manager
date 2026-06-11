@@ -21,9 +21,10 @@ function checkDailyReport() {
 
   const now = new Date();
   const currentTime = `${now.getHours().toString().padStart(2, "0")}:${now.getMinutes().toString().padStart(2, "0")}`;
-  const today = now.toISOString().slice(0, 10);
+  // Use local date (not UTC) — toISOString() flips at midnight UTC which mismatches local hours
+  const today = `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, "0")}-${now.getDate().toString().padStart(2, "0")}`;
 
-  if (currentTime === time && lastReportDate !== today) {
+  if (currentTime >= time && lastReportDate !== today) {
     lastReportDate = today;
     sendDailyReport().catch((e) => console.error("[bot] daily report failed:", e));
   }
