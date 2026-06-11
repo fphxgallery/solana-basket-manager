@@ -287,6 +287,24 @@ export function needsRebalance(): boolean {
   return false;
 }
 
+// rawAmount: the on-chain atom amount to pass to Jupiter (correct decimals per token)
+// displaySol: approximate SOL value for the trade log
+interface PlannedSwap {
+  inputMint: string;
+  outputMint: string;
+  rawAmount: bigint;
+  displaySol: number;
+}
+
+interface SwapResult {
+  label: string;
+  sol: number;
+  status: "confirmed" | "failed";
+}
+
+// Reserve SOL for gas fees across all buy swaps (priority fee + sig cost per swap)
+const GAS_RESERVE_SOL = 0.01;
+
 export async function executeRebalance(
   connection: Connection,
   keypair: Keypair,
@@ -297,24 +315,44 @@ export async function executeRebalance(
   if (!holdings.length || totalValueSol === 0) return;
 
   // Only rebalance tokens that have drifted beyond the threshold — skip dust drift
-  const { driftThresholdPct } = basketStore.config;
+  const { driftThresholdPct, minSwapUsd } = basketStore.config;
   const sells = holdings.filter((h) => h.driftPct >= driftThresholdPct && h.mint !== WSOL);
   const buys = holdings.filter((h) => h.driftPct <= -driftThresholdPct && h.mint !== WSOL);
 
-  // rawAmount: the on-chain atom amount to pass to Jupiter (correct decimals per token)
-  // displaySol: approximate SOL value for the trade log
-  const swaps: Array<{ inputMint: string; outputMint: string; rawAmount: bigint; displaySol: number }> = [];
+  // Min-swap floor only applies when the SOL price is known — a CoinGecko
+  // outage (solUsd = 0) must not silently filter out every swap
+  const solUsd = await getSolUsd();
+  const aboveFloor = (s: PlannedSwap) => solUsd <= 0 || s.displaySol * solUsd >= minSwapUsd;
+  let skipped = 0;
 
+  const sellSwaps: PlannedSwap[] = [];
   for (const h of sells) {
     const excessSol = (h.driftPct / 100) * totalValueSol;
     const excessFraction = h.valueSol > 0 ? Math.min(excessSol / h.valueSol, 1) : 0;
     // BigInt scaling avoids precision loss for large 9-decimal balances (>2^53 atoms)
     const rawAmount = BigInt(h.rawAmount) * BigInt(Math.floor(excessFraction * 1_000_000)) / 1_000_000n;
-    swaps.push({ inputMint: h.mint, outputMint: WSOL, rawAmount, displaySol: excessSol });
+    sellSwaps.push({ inputMint: h.mint, outputMint: WSOL, rawAmount, displaySol: excessSol });
   }
-  // Reserve SOL for gas fees across all buy swaps (priority fee + sig cost per swap)
-  const GAS_RESERVE_SOL = 0.01;
-  let solBudget = Math.max(0, (store.walletBalanceSol ?? 0) - GAS_RESERVE_SOL);
+  const filteredSells = sellSwaps.filter(aboveFloor);
+  skipped += sellSwaps.length - filteredSells.length;
+
+  const results: SwapResult[] = [];
+
+  for (const swap of filteredSells) {
+    const result = await performSwap(connection, keypair, swap);
+    if (result) results.push(result);
+  }
+
+  // Compute the buy budget AFTER sells execute so sell proceeds fund the buys
+  let solBudget: number;
+  try {
+    const lamports = await connection.getBalance(keypair.publicKey);
+    solBudget = Math.max(0, lamports / 1e9 - GAS_RESERVE_SOL);
+  } catch {
+    solBudget = Math.max(0, (store.walletBalanceSol ?? 0) - GAS_RESERVE_SOL);
+  }
+
+  const buySwaps: PlannedSwap[] = [];
   for (const h of buys) {
     const deficitSol = (Math.abs(h.driftPct) / 100) * totalValueSol;
     const buyAmount = Math.min(deficitSol, solBudget);
@@ -322,167 +360,24 @@ export async function executeRebalance(
     solBudget -= buyAmount;
     // Buying with SOL: input is WSOL, amount in lamports (9 decimals)
     const rawAmount = BigInt(Math.floor(buyAmount * 1e9));
-    swaps.push({ inputMint: WSOL, outputMint: h.mint, rawAmount, displaySol: buyAmount });
+    buySwaps.push({ inputMint: WSOL, outputMint: h.mint, rawAmount, displaySol: buyAmount });
   }
+  const filteredBuys = buySwaps.filter(aboveFloor);
+  skipped += buySwaps.length - filteredBuys.length;
 
-  // Drop swaps below the min-swap floor — fee+slippage would eat the trade
-  const solUsd = await getSolUsd();
-  const { minSwapUsd } = basketStore.config;
-  const filteredSwaps = swaps.filter((s) => s.displaySol * solUsd >= minSwapUsd);
-  const skipped = swaps.length - filteredSwaps.length;
   if (skipped > 0) console.log(`[basket] skipped ${skipped} swap(s) below $${minSwapUsd} min`);
 
-  if (!filteredSwaps.length) {
+  if (!filteredSells.length && !filteredBuys.length) {
     console.log("[basket] no rebalance needed");
     basketStore.recordRebalance();
     return;
   }
 
-  console.log(`[basket] rebalancing ${filteredSwaps.length} positions`);
+  console.log(`[basket] rebalancing ${filteredSells.length + filteredBuys.length} positions`);
 
-  const results: Array<{ label: string; sol: number; status: "confirmed" | "failed" }> = [];
-
-  for (const swap of filteredSwaps) {
-    const inputSymbol = basketStore.config.tokens.find((t) => t.mint === swap.inputMint)?.symbol
-      ?? (swap.inputMint === WSOL ? "SOL" : swap.inputMint.slice(0, 4));
-    const outputSymbol = basketStore.config.tokens.find((t) => t.mint === swap.outputMint)?.symbol
-      ?? (swap.outputMint === WSOL ? "SOL" : swap.outputMint.slice(0, 4));
-    const swapLabel = `${inputSymbol} → ${outputSymbol}`;
-
-    const tradeId = randomUUID();
-    const tradeRecord = {
-      id: tradeId,
-      timestamp: Date.now(),
-      profitSol: 0,
-      profitBps: 0,
-      route: `REBALANCE: ${swapLabel}`,
-      dexLabels: [] as string[],
-      bundleId: "",
-      status: "pending" as const,
-      inputSol: swap.displaySol,
-      outputSol: 0,
-    };
-
-    if (swap.rawAmount < 1_000n) continue; // skip dust — before addTrade to avoid phantom pending entries
-
-    try {
-      store.addTrade(tradeRecord);
-
-      // Stagger rebalance swaps — not latency-sensitive
-      await new Promise((r) => setTimeout(r, 1000));
-
-      // Use lite API + higher slippage for rebalance (not latency-sensitive, just needs to fill)
-      const params = new URLSearchParams({
-        inputMint: swap.inputMint,
-        outputMint: swap.outputMint,
-        amount: swap.rawAmount.toString(),
-        slippageBps: CONFIG.REBALANCE_SLIPPAGE_BPS.toString(),
-      });
-
-      // Retry quote on 429
-      let qRes: Response | null = null;
-      for (let attempt = 0; attempt < 4; attempt++) {
-        qRes = await fetch(`${CONFIG.JUPITER_LITE_QUOTE_URL}?${params}`);
-        if (qRes.status !== 429) break;
-        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
-      }
-      if (!qRes || !qRes.ok) {
-        console.error("[basket] quote failed:", qRes ? await qRes.text() : "no response");
-        store.updateTradeStatus(tradeId, "failed");
-        results.push({ label: swapLabel, sol: swap.displaySol, status: "failed" });
-        continue;
-      }
-
-      const quote = (await qRes.json()) as JupiterQuote;
-      const outAmountSol = swap.outputMint === WSOL
-        ? Number(BigInt(quote.outAmount)) / 1e9
-        : swap.displaySol;
-
-      // Build swap tx via lite API (no key needed)
-      const swapBody = JSON.stringify({
-        quoteResponse: quote,
-        userPublicKey: keypair.publicKey.toBase58(),
-        wrapAndUnwrapSol: true,
-        dynamicComputeUnitLimit: true,
-        prioritizationFeeLamports: { priorityLevelWithMaxLamports: { maxLamports: CONFIG.PRIORITY_FEE_LAMPORTS, priorityLevel: "medium" } },
-      });
-      let swapHttpRes: Response | null = null;
-      for (let attempt = 0; attempt < 4; attempt++) {
-        swapHttpRes = await fetch(CONFIG.JUPITER_LITE_SWAP_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: swapBody,
-        });
-        if (swapHttpRes.status !== 429) break;
-        await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
-      }
-      if (!swapHttpRes || !swapHttpRes.ok) {
-        const errText = swapHttpRes ? await swapHttpRes.text() : "no response";
-        console.error("[basket] swap tx failed:", errText);
-        store.updateTradeStatus(tradeId, "failed");
-        results.push({ label: swapLabel, sol: swap.displaySol, status: "failed" });
-        continue;
-      }
-
-      const swapRes = (await swapHttpRes.json()) as { swapTransaction: string };
-      const tx = VersionedTransaction.deserialize(
-        Buffer.from(swapRes.swapTransaction, "base64"),
-      );
-      tx.sign([keypair]);
-
-      const sig = await connection.sendRawTransaction(tx.serialize(), {
-        skipPreflight: false,
-        maxRetries: 3,
-      });
-      console.log(`[basket] rebalance swap sent: ${sig}`);
-
-      // Update record with sig and approximate output
-      const t = store.trades.find((r) => r.id === tradeId);
-      if (t) {
-        t.bundleId = sig;
-        t.outputSol = outAmountSol;
-        t.dexLabels = [quote.routePlan?.[0]?.swapInfo?.label ?? "Jupiter"];
-      }
-
-      // Wait for on-chain confirmation before marking status
-      try {
-        const result = await connection.confirmTransaction(sig, "confirmed");
-        if (result.value.err) {
-          console.error(`[basket] swap failed on-chain: ${JSON.stringify(result.value.err)}`);
-          store.updateTradeStatus(tradeId, "failed");
-          results.push({ label: swapLabel, sol: swap.displaySol, status: "failed" });
-        } else {
-          console.log(`[basket] swap confirmed: ${sig}`);
-          store.updateTradeStatus(tradeId, "confirmed");
-          results.push({ label: swapLabel, sol: swap.displaySol, status: "confirmed" });
-        }
-      } catch {
-        // confirmTransaction timed out — the tx may still land. Poll once before giving up.
-        console.warn(`[basket] confirmation timeout for ${sig} — polling status once`);
-        try {
-          await new Promise((r) => setTimeout(r, 5000));
-          const { value } = await connection.getSignatureStatus(sig);
-          const conf = value?.confirmationStatus;
-          if (conf === "confirmed" || conf === "finalized") {
-            console.log(`[basket] swap confirmed (late): ${sig}`);
-            store.updateTradeStatus(tradeId, "confirmed");
-            results.push({ label: swapLabel, sol: swap.displaySol, status: "confirmed" });
-          } else {
-            console.warn(`[basket] swap status unknown after poll (${conf ?? "null"}): ${sig}`);
-            store.updateTradeStatus(tradeId, "failed");
-            results.push({ label: swapLabel, sol: swap.displaySol, status: "failed" });
-          }
-        } catch (pollErr) {
-          console.error(`[basket] status poll failed for ${sig}:`, pollErr);
-          store.updateTradeStatus(tradeId, "failed");
-          results.push({ label: swapLabel, sol: swap.displaySol, status: "failed" });
-        }
-      }
-    } catch (e) {
-      console.error("[basket] swap failed:", e);
-      store.updateTradeStatus(tradeId, "failed");
-      results.push({ label: swapLabel, sol: swap.displaySol, status: "failed" });
-    }
+  for (const swap of filteredBuys) {
+    const result = await performSwap(connection, keypair, swap);
+    if (result) results.push(result);
   }
 
   basketStore.recordRebalance();
@@ -494,6 +389,152 @@ export async function executeRebalance(
       `${r.status === "confirmed" ? "✅" : "❌"} ${r.label} — ${r.sol.toFixed(4)} SOL`,
     );
     notify(`${icon} <b>Rebalance complete</b>\n${lines.join("\n")}`).catch(() => {});
+  }
+}
+
+/** Quote, build, sign, send and confirm one rebalance swap. Returns null for dust skips. */
+async function performSwap(
+  connection: Connection,
+  keypair: Keypair,
+  swap: PlannedSwap,
+): Promise<SwapResult | null> {
+  const inputSymbol = basketStore.config.tokens.find((t) => t.mint === swap.inputMint)?.symbol
+    ?? (swap.inputMint === WSOL ? "SOL" : swap.inputMint.slice(0, 4));
+  const outputSymbol = basketStore.config.tokens.find((t) => t.mint === swap.outputMint)?.symbol
+    ?? (swap.outputMint === WSOL ? "SOL" : swap.outputMint.slice(0, 4));
+  const swapLabel = `${inputSymbol} → ${outputSymbol}`;
+  const failed: SwapResult = { label: swapLabel, sol: swap.displaySol, status: "failed" };
+  const confirmed: SwapResult = { label: swapLabel, sol: swap.displaySol, status: "confirmed" };
+
+  const tradeId = randomUUID();
+  const tradeRecord = {
+    id: tradeId,
+    timestamp: Date.now(),
+    profitSol: 0,
+    profitBps: 0,
+    route: `REBALANCE: ${swapLabel}`,
+    dexLabels: [] as string[],
+    bundleId: "",
+    status: "pending" as const,
+    inputSol: swap.displaySol,
+    outputSol: 0,
+  };
+
+  if (swap.rawAmount < 1_000n) return null; // skip dust — before addTrade to avoid phantom pending entries
+
+  try {
+    store.addTrade(tradeRecord);
+
+    // Stagger rebalance swaps — not latency-sensitive
+    await new Promise((r) => setTimeout(r, 1000));
+
+    // Use lite API + higher slippage for rebalance (not latency-sensitive, just needs to fill)
+    const params = new URLSearchParams({
+      inputMint: swap.inputMint,
+      outputMint: swap.outputMint,
+      amount: swap.rawAmount.toString(),
+      slippageBps: CONFIG.REBALANCE_SLIPPAGE_BPS.toString(),
+    });
+
+    // Retry quote on 429
+    let qRes: Response | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      qRes = await fetch(`${CONFIG.JUPITER_LITE_QUOTE_URL}?${params}`);
+      if (qRes.status !== 429) break;
+      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+    }
+    if (!qRes || !qRes.ok) {
+      console.error("[basket] quote failed:", qRes ? await qRes.text() : "no response");
+      store.updateTradeStatus(tradeId, "failed");
+      return failed;
+    }
+
+    const quote = (await qRes.json()) as JupiterQuote;
+    const outAmountSol = swap.outputMint === WSOL
+      ? Number(BigInt(quote.outAmount)) / 1e9
+      : swap.displaySol;
+
+    // Build swap tx via lite API (no key needed)
+    const swapBody = JSON.stringify({
+      quoteResponse: quote,
+      userPublicKey: keypair.publicKey.toBase58(),
+      wrapAndUnwrapSol: true,
+      dynamicComputeUnitLimit: true,
+      prioritizationFeeLamports: { priorityLevelWithMaxLamports: { maxLamports: CONFIG.PRIORITY_FEE_LAMPORTS, priorityLevel: "medium" } },
+    });
+    let swapHttpRes: Response | null = null;
+    for (let attempt = 0; attempt < 4; attempt++) {
+      swapHttpRes = await fetch(CONFIG.JUPITER_LITE_SWAP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: swapBody,
+      });
+      if (swapHttpRes.status !== 429) break;
+      await new Promise((r) => setTimeout(r, 1500 * (attempt + 1)));
+    }
+    if (!swapHttpRes || !swapHttpRes.ok) {
+      const errText = swapHttpRes ? await swapHttpRes.text() : "no response";
+      console.error("[basket] swap tx failed:", errText);
+      store.updateTradeStatus(tradeId, "failed");
+      return failed;
+    }
+
+    const swapRes = (await swapHttpRes.json()) as { swapTransaction: string };
+    const tx = VersionedTransaction.deserialize(
+      Buffer.from(swapRes.swapTransaction, "base64"),
+    );
+    tx.sign([keypair]);
+
+    const sig = await connection.sendRawTransaction(tx.serialize(), {
+      skipPreflight: false,
+      maxRetries: 3,
+    });
+    console.log(`[basket] rebalance swap sent: ${sig}`);
+
+    // Update record with sig and approximate output
+    const t = store.trades.find((r) => r.id === tradeId);
+    if (t) {
+      t.bundleId = sig;
+      t.outputSol = outAmountSol;
+      t.dexLabels = [quote.routePlan?.[0]?.swapInfo?.label ?? "Jupiter"];
+    }
+
+    // Wait for on-chain confirmation before marking status
+    try {
+      const result = await connection.confirmTransaction(sig, "confirmed");
+      if (result.value.err) {
+        console.error(`[basket] swap failed on-chain: ${JSON.stringify(result.value.err)}`);
+        store.updateTradeStatus(tradeId, "failed");
+        return failed;
+      }
+      console.log(`[basket] swap confirmed: ${sig}`);
+      store.updateTradeStatus(tradeId, "confirmed");
+      return confirmed;
+    } catch {
+      // confirmTransaction timed out — the tx may still land. Poll once before giving up.
+      console.warn(`[basket] confirmation timeout for ${sig} — polling status once`);
+      try {
+        await new Promise((r) => setTimeout(r, 5000));
+        const { value } = await connection.getSignatureStatus(sig);
+        const conf = value?.confirmationStatus;
+        if (conf === "confirmed" || conf === "finalized") {
+          console.log(`[basket] swap confirmed (late): ${sig}`);
+          store.updateTradeStatus(tradeId, "confirmed");
+          return confirmed;
+        }
+        console.warn(`[basket] swap status unknown after poll (${conf ?? "null"}): ${sig}`);
+        store.updateTradeStatus(tradeId, "failed");
+        return failed;
+      } catch (pollErr) {
+        console.error(`[basket] status poll failed for ${sig}:`, pollErr);
+        store.updateTradeStatus(tradeId, "failed");
+        return failed;
+      }
+    }
+  } catch (e) {
+    console.error("[basket] swap failed:", e);
+    store.updateTradeStatus(tradeId, "failed");
+    return failed;
   }
 }
 

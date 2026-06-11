@@ -120,6 +120,11 @@ sudo systemctl status basket-manager
 
 ## Changelog
 
+### v2.2.1
+- Fix: min-swap fee gate no longer skips every swap when the SOL/USD price is unavailable (CoinGecko outage) — the floor only applies when a price is known
+- Fix: rebalance buys are now funded by sell proceeds — sells execute first, the SOL balance is re-fetched, then buys are sized against the updated budget (previously buys were clamped to the pre-sell balance and could be dropped entirely)
+- Refactor: per-swap quote/sign/send/confirm logic extracted into `performSwap()`
+
 ### v2.2.0
 - Basket settings fields (drift threshold, rebalance interval, min swap) now display on a single row
 
