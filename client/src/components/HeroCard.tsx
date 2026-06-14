@@ -121,7 +121,12 @@ export function HeroCard({
             <div className="relative h-1.5 rounded-full bg-[#0e1c28] overflow-hidden">
               <div
                 className="absolute inset-y-0 left-0 rounded-full"
-                style={{ width: `${Math.min(ratio, 1) * 100}%`, background: "var(--cyan)" }}
+                style={{
+                  width: `${Math.min(ratio, 1) * 100}%`,
+                  backgroundImage: "linear-gradient(90deg, #f87171, #fbbf24 55%, #34d399)",
+                  backgroundSize: `${100 / Math.max(Math.min(ratio, 1) * 100, 0.01) * 100}% 100%`,
+                  backgroundRepeat: "no-repeat",
+                }}
               />
               {/* peak tick */}
               <div className="absolute inset-y-0 right-0 w-px bg-cyan/70" />
@@ -139,7 +144,12 @@ export function HeroCard({
             <div className="relative h-1.5 rounded-full bg-[#0e1c28] overflow-hidden">
               <div
                 className="absolute inset-y-0 left-0 rounded-full"
-                style={{ width: `${decayFrac * 100}%`, background: "var(--warn)" }}
+                style={{
+                  width: `${decayFrac * 100}%`,
+                  backgroundImage: "linear-gradient(90deg, #34d399, #fbbf24 55%, #f87171)",
+                  backgroundSize: `${100 / Math.max(decayFrac * 100, 0.01) * 100}% 100%`,
+                  backgroundRepeat: "no-repeat",
+                }}
               />
               {/* half-life marker */}
               <div className="absolute inset-y-0 right-0 w-px bg-warn/60" />

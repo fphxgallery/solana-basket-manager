@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.1.2-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.1.3-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot.png)
 
@@ -124,6 +124,11 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.1.3
+- Feat: the ATH and peak-decay bars now use **spectrum gradient fills** that change color with position — ATH runs red→amber→green (green at the leading edge = near peak), peak-decay runs green→amber→red (red as it ages toward ½-life); the gradient is sized to the full track so the color maps to absolute value
+- Change: holdings **drift pills that round to 0.0%** (`|drift| < 0.05`) now render grayish instead of green/amber
+- Change: donut + legend recolored to an 11-stop warm→cool spectrum (red→orange→gold→green→teal→blue→violet→magenta)
 
 ### v3.1.2
 - Feat: hero P&L card adds a **peak-decay bar** — an amber progress bar showing how far the locked high-water mark has aged through its current half-life (label keeps the `6h to ½` / `past ½-life` countdown); only shown when profit-lock is enabled

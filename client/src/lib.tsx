@@ -20,9 +20,8 @@ export function truncate(s: string, n = 8) {
 // Donut keeps a rainbow categorical palette — the one intentionally non-cyan
 // element (a cyan-mono donut would be unreadable).
 export const CHART_COLORS = [
-  "#22d3ee", "#34d399", "#a78bfa", "#f59e0b", "#f472b6",
-  "#60a5fa", "#fb7185", "#4ade80", "#facc15", "#c084fc",
-  "#2dd4bf", "#fb923c", "#818cf8", "#e879f9", "#38bdf8",
+  "#c94040", "#d4704a", "#d49b4a", "#c9c44a", "#6abf69", "#4db6ac",
+  "#42a5c4", "#4a7dc4", "#6a5cc4", "#a05cc4", "#c45ca0",
 ];
 
 export function copyToClipboard(text: string): void {

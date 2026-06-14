@@ -73,6 +73,7 @@ export function HoldingsTable({
                     const cur = h?.currentWeight ?? 0;
                     const tgt = h?.targetWeight ?? token.targetWeight;
                     const inBand = Math.abs(drift) < threshold;
+                    const isZero = Math.abs(drift) < 0.05;
                     const isDyn = !!dynMint && token.mint === dynMint;
                     const isReserve = !!reserveMint && token.mint === reserveMint;
                     return (
@@ -110,7 +111,7 @@ export function HoldingsTable({
                           {h ? (
                             <span
                               className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium tabular-nums ${
-                                inBand ? "text-good bg-[#0c241c]" : "text-warn bg-[#241d08]"
+                                isZero ? "text-dim bg-[#141c26]" : inBand ? "text-good bg-[#0c241c]" : "text-warn bg-[#241d08]"
                               }`}
                             >
                               {drift >= 0 ? "+" : ""}{drift.toFixed(1)}%
