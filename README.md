@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.0.0-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot.png)
 
@@ -11,7 +11,7 @@ Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at targ
 - **Token basket** — hold any SPL/Token-2022 tokens at target weights; auto-rebalances on drift or schedule via Jupiter swaps
 - **Dynamic USDC profit-taking** — USDC target weight shifts automatically based on basket PnL%
 - **PnL tracking** — SOL and USD baseline, 24h portfolio chart
-- **Live dashboard** — React + Tailwind UI with SSE updates, rebalance log, wallet management
+- **Live dashboard** — React + Tailwind "Cyber grid" UI with SSE updates: 50/50 hero (merged P&L + HWM bar + wallet tile ‖ distribution donut + legend), full-width portfolio chart, holdings table with per-token allocation bars and `DYNAMIC`/`RESERVE` pills, rebalance log, and a consolidated Settings tab (wallet, basket settings, Telegram, daily report)
 - **Token-protected API** — all endpoints require an auth token (cookie or bearer); dashboard has a sign-in screen
 - **Configurable at runtime** — basket weights, drift threshold, rebalance interval — no restart needed
 
@@ -81,7 +81,12 @@ src/
   config.ts       — env + app config
   wallet.ts       — keypair create/import/load (wallet/keypair.json)
 client/src/
-  App.tsx         — single-file React dashboard
+  App.tsx         — dashboard shell: state, SSE, data fetching, handlers, tab routing, modals
+  lib.tsx         — shared helpers + primitives (Card, Modal, CopyButton, palette, formatters)
+  types.ts        — shared API/state types
+  index.css       — Cyber-grid theme tokens (CSS vars) + animated background
+  components/      — CyberBackground, AppHeader, HeroCard, PortfolioChartCard,
+                    Tabs, HoldingsTable, SettingsTab
 ```
 
 **Rebalance flow:** 3-min timer prices holdings via Jupiter → every 5 min, if any token's drift exceeds the threshold (or the interval has elapsed) → sell overweight tokens, then buy underweight with the proceeds (Jupiter lite swaps, sent direct).
@@ -119,6 +124,16 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.0.0
+- **Dashboard redesign ("Cyber grid")** — full visual overhaul of the React client: opaque cards over a page-level animated cyan conic gradient + grid, monospace data, cyan-monochrome theme with semantic color overrides (green gains/in-band, red loss/destructive, amber drifting/reserve, rainbow donut)
+- Bot control (start/stop + uptime + status) moved into the app header; version pill next to the title
+- **50/50 hero card** — left: merged P&L (total value, gain/loss, current÷peak high-water-mark bar, decay countdown, reset) plus a wallet-balance tile (balance + address + copy); right: distribution donut (token count in center) with an aligned legend
+- Portfolio value chart pulled into its own full-width card (cyan line, gradient fill, endpoint dot, 24H/7D/30D)
+- Holdings table gains per-token allocation bars with a target tick, color-coded drift pills, and `DYNAMIC` / `RESERVE` token pills (reserve shows a floor marker on its bar)
+- New **Settings** tab consolidates wallet management, basket settings (drift / interval / min-swap), Telegram, and daily report; tab bar uses a minimal marker-dot active style
+- Refactor: client split from a single `App.tsx` into `lib.tsx` + a `components/` directory; theme tokens centralized as CSS variables in `index.css` and mapped to Tailwind utilities
+- No backend/API changes — presentation only; all existing data flow and handlers preserved
 
 ### v2.3.0
 - Feat: configurable dynamic weight token — any basket token can now be the profit-taking target (previously hardcoded to USDC); set via "Dynamic weight token" on the Dynamic Weight tab
