@@ -58,12 +58,14 @@ export function HeroCard({
 
   // HWM decay countdown
   let decayLabel: string | null = null;
+  let decayFrac: number | null = null;
   let peakUsd: number | null = null;
   if (basket?.config.hwmEnabled && basket.hwmValueUsd != null && basket.hwmCapturedAt != null) {
     peakUsd = basket.hwmValueUsd;
     const elapsedDays = (Date.now() - basket.hwmCapturedAt) / 86_400_000;
     const halfLife = basket.config.hwmHalfLifeDays ?? 7;
     const toHalf = halfLife - elapsedDays;
+    decayFrac = Math.max(0, Math.min(elapsedDays / halfLife, 1));
     decayLabel = toHalf > 0
       ? (toHalf >= 1 ? `${toHalf.toFixed(1)}d` : `${(toHalf * 24).toFixed(0)}h`) + " to ½"
       : "past ½-life";
@@ -113,8 +115,8 @@ export function HeroCard({
         {ratio != null && (
           <div className="mt-4">
             <div className="flex items-center justify-between text-[10px] text-dim mb-1">
-              <span>CURRENT ${totalUsd!.toFixed(0)}</span>
-              <span>{(ratio * 100).toFixed(1)}% of peak</span>
+              <span>{peakUsd != null ? `All Time High $${peakUsd.toFixed(2)}` : ""}</span>
+              <span>{(ratio * 100).toFixed(1)}% of ATH</span>
             </div>
             <div className="relative h-1.5 rounded-full bg-[#0e1c28] overflow-hidden">
               <div
@@ -124,11 +126,24 @@ export function HeroCard({
               {/* peak tick */}
               <div className="absolute inset-y-0 right-0 w-px bg-cyan/70" />
             </div>
-            {peakUsd != null && (
-              <div className="mt-1.5 text-[10px] text-dim">
-                Peak ${peakUsd.toFixed(2)}{decayLabel && <span> · {decayLabel}</span>}
-              </div>
-            )}
+          </div>
+        )}
+
+        {/* HWM decay progress bar */}
+        {decayFrac != null && (
+          <div className="mt-4">
+            <div className="flex items-center justify-between text-[10px] text-dim mb-1">
+              <span>PEAK DECAY</span>
+              <span className="text-warn">{decayLabel}</span>
+            </div>
+            <div className="relative h-1.5 rounded-full bg-[#0e1c28] overflow-hidden">
+              <div
+                className="absolute inset-y-0 left-0 rounded-full"
+                style={{ width: `${decayFrac * 100}%`, background: "var(--warn)" }}
+              />
+              {/* half-life marker */}
+              <div className="absolute inset-y-0 right-0 w-px bg-warn/60" />
+            </div>
           </div>
         )}
 

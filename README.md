@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.1.1-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.1.2-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot.png)
 
@@ -124,6 +124,10 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.1.2
+- Feat: hero P&L card adds a **peak-decay bar** — an amber progress bar showing how far the locked high-water mark has aged through its current half-life (label keeps the `6h to ½` / `past ½-life` countdown); only shown when profit-lock is enabled
+- Change: the cyan drawdown bar is relabeled **ATH** — `All Time High $368.31` (left) · `98.6% of ATH` (right); dropped the redundant `CURRENT` label and the separate peak line below the bar
 
 ### v3.1.1
 - Rebrand: app title is now **BALLAST** with an animated cyan gradient sheen (header + sign-in + browser tab); honors `prefers-reduced-motion`
