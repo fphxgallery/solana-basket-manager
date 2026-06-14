@@ -125,40 +125,20 @@ sudo systemctl status basket-manager
 
 ## Changelog
 
-### v3.1.4
-- Change: new **logo** — a cyan hull-with-waterline mark (ballast keel below the line) replaces the old purple basket; updates the header icon and browser tab favicon
-
-### v3.1.3
-- Feat: the ATH and peak-decay bars now use **spectrum gradient fills** that change color with position — ATH runs red→amber→green (green at the leading edge = near peak), peak-decay runs green→amber→red (red as it ages toward ½-life); the gradient is sized to the full track so the color maps to absolute value
-- Change: holdings **drift pills that round to 0.0%** (`|drift| < 0.05`) now render grayish instead of green/amber
-- Change: donut + legend recolored to an 11-stop warm→cool spectrum (red→orange→gold→green→teal→blue→violet→magenta)
-
-### v3.1.2
-- Feat: hero P&L card adds a **peak-decay bar** — an amber progress bar showing how far the locked high-water mark has aged through its current half-life (label keeps the `6h to ½` / `past ½-life` countdown); only shown when profit-lock is enabled
-- Change: the cyan drawdown bar is relabeled **ATH** — `All Time High $368.31` (left) · `98.6% of ATH` (right); dropped the redundant `CURRENT` label and the separate peak line below the bar
-
-### v3.1.1
-- Rebrand: app title is now **BALLAST** with an animated cyan gradient sheen (header + sign-in + browser tab); honors `prefers-reduced-motion`
-
-### v3.1.0
-- Feat: **Dynamic Weight tab redesigned** — the profit-taking curve is now a live chart (PnL% → token%) with editable breakpoint chips below it, and the token / high-water-mark / reserve-floor settings sit in a compact footer grid (replaces the old stack of full-width inputs)
-- Feat: **clear rebalance log** — a two-click "Clear logs" button on the Rebalance Log tab; new `POST /api/trades/clear` empties `data/trades.json` and broadcasts a fresh snapshot to all connected clients
-- Feat: rebalance log now shows per-swap profit (`+0.0031 SOL · +12 bps`, green/red) for confirmed trades
-- Change: tab order is now Basket · Dynamic Weight · Rebalance Log · Settings
-- Change: Rebalance / Edit basket buttons moved up onto the tab row; holdings header condensed to a single line
-- Change: holdings table target % is read-only and the per-row delete was removed — edit/remove tokens from the Edit basket modal instead
-- Change: Settings tab's Telegram + Daily Report card now fills the column height
-- Polish: accessibility labels on icon-only controls, tab row wraps on narrow widths, header version pill now derives from `package.json`, removed dead code
+### v3.1.x
+- New **BALLAST** rebrand: animated cyan gradient title and a hull-with-waterline logo (header + favicon)
+- Hero P&L bars relabeled to **ATH** plus a new **peak-decay** bar; both use spectrum gradient fills that track their value
+- Holdings drift pills that round to `0.0%` now render gray; donut recolored to an 11-stop warm→cool spectrum
+- **Dynamic Weight tab** redesigned — live profit-taking curve chart with editable breakpoints (replaces the full-width input stack)
+- **Clear rebalance log** button (`POST /api/trades/clear`); rebalance log shows per-swap profit
+- Layout cleanup: tab order, actions on the tab row, single-line holdings header, read-only target %, a11y labels, dynamic version pill
 
 ### v3.0.0
-- **Dashboard redesign ("Cyber grid")** — full visual overhaul of the React client: opaque cards over a page-level animated cyan conic gradient + grid, monospace data, cyan-monochrome theme with semantic color overrides (green gains/in-band, red loss/destructive, amber drifting/reserve, rainbow donut)
-- Bot control (start/stop + uptime + status) moved into the app header; version pill next to the title
-- **50/50 hero card** — left: merged P&L (total value, gain/loss, current÷peak high-water-mark bar, decay countdown, reset) plus a wallet-balance tile (balance + address + copy); right: distribution donut (token count in center) with an aligned legend
-- Portfolio value chart pulled into its own full-width card (cyan line, gradient fill, endpoint dot, 24H/7D/30D)
-- Holdings table gains per-token allocation bars with a target tick, color-coded drift pills, and `DYNAMIC` / `RESERVE` token pills (reserve shows a floor marker on its bar)
-- New **Settings** tab consolidates wallet management, basket settings (drift / interval / min-swap), Telegram, and daily report; tab bar uses a minimal marker-dot active style
-- Refactor: client split from a single `App.tsx` into `lib.tsx` + a `components/` directory; theme tokens centralized as CSS variables in `index.css` and mapped to Tailwind utilities
-- No backend/API changes — presentation only; all existing data flow and handlers preserved
+- **Dashboard redesign ("Cyber grid")** — full React client overhaul: opaque cards over an animated cyan gradient + grid, monospace data, cyan theme with semantic color overrides
+- **50/50 hero card** (merged P&L + wallet tile · distribution donut) and a full-width portfolio value chart
+- Holdings table with per-token allocation bars, drift pills, and `DYNAMIC` / `RESERVE` pills
+- Bot control moved into the header; new consolidated **Settings** tab (wallet, basket settings, Telegram, daily report)
+- Refactor: client split into `lib.tsx` + `components/`, theme tokens as CSS variables — no backend changes
 
 ### v2.3.0
 - Feat: configurable dynamic weight token — any basket token can now be the profit-taking target (previously hardcoded to USDC); set via "Dynamic weight token" on the Dynamic Weight tab
