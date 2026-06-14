@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.1.3-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.1.4-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot.png)
 
@@ -124,6 +124,9 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.1.4
+- Change: new **logo** — a cyan hull-with-waterline mark (ballast keel below the line) replaces the old purple basket; updates the header icon and browser tab favicon
 
 ### v3.1.3
 - Feat: the ATH and peak-decay bars now use **spectrum gradient fills** that change color with position — ATH runs red→amber→green (green at the leading edge = near peak), peak-decay runs green→amber→red (red as it ages toward ½-life); the gradient is sized to the full track so the color maps to absolute value
