@@ -4,7 +4,7 @@ Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at targ
 
 ![Version](https://img.shields.io/badge/version-3.1.4-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
-![Dashboard screenshot](docs/screenshot.png)
+![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
 ## Features
 
