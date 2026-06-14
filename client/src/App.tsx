@@ -7,9 +7,11 @@ import {
   CircleDollarSign,
   KeyRound,
   Layers,
+  Pencil,
   Plus,
   RefreshCw,
   Settings,
+  Trash2,
   TrendingUp,
   X,
 } from "lucide-react";
@@ -147,6 +149,7 @@ function Dashboard() {
   const [basket, setBasket] = useState<BasketState | null>(null);
   const [rightTab, setRightTab] = useState<TabKey>("basket");
   const [tradePage, setTradePage] = useState(0);
+  const [clearArmed, setClearArmed] = useState(false);
   const [basketEditorOpen, setBasketEditorOpen] = useState(false);
   const [editorTokens, setEditorTokens] = useState<BasketToken[]>([]);
   const [editorMint, setEditorMint] = useState("");
@@ -449,32 +452,6 @@ function Dashboard() {
     }
   }
 
-  async function removeToken(mint: string) {
-    const newTokens = (basket?.config.tokens ?? []).filter((t) => t.mint !== mint);
-    await fetch("/api/basket/tokens", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tokens: newTokens }),
-    });
-  }
-
-  async function updateWeight(mint: string, weight: number) {
-    const newTokens = (basket?.config.tokens ?? []).map((t) =>
-      t.mint === mint ? { ...t, targetWeight: weight } : t,
-    );
-    const res = await fetch("/api/basket/tokens", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tokens: newTokens }),
-    });
-    if (!res.ok) {
-      const d = await res.json() as { error?: string };
-      setBasketError(d.error ?? "Failed");
-    } else {
-      setBasketError(null);
-    }
-  }
-
   async function saveBasketSettings(patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; hwmEnabled?: boolean; hwmHalfLifeDays?: number; minSwapUsd?: number; dynamicWeightMint?: string; reserveMint?: string | null; reserveFloorPct?: number }) {
     await fetch("/api/basket/settings", {
       method: "PATCH",
@@ -500,6 +477,19 @@ function Dashboard() {
       setRebalancing(false);
       setTimeout(() => setRebalanceMsg(null), 5000);
     }
+  }
+
+  // Clear rebalance log — two-click confirm; server clears trades.json and
+  // broadcasts a fresh snapshot, so the SSE stream updates every client.
+  function clearLogs() {
+    if (!clearArmed) {
+      setClearArmed(true);
+      setTimeout(() => setClearArmed(false), 3000);
+      return;
+    }
+    setClearArmed(false);
+    setTradePage(0);
+    fetch("/api/trades/clear", { method: "POST" }).catch(() => {});
   }
 
   // Fetch wallet on load
@@ -660,16 +650,57 @@ function Dashboard() {
 
           {/* Tabbed panel */}
           <div className="bg-card border border-cardline rounded-card">
-            <Tabs
-              active={rightTab}
-              onChange={(k) => { setRightTab(k); if (k === "trades") setTradePage(0); }}
-              tabs={[
-                { key: "trades", label: "REBALANCE LOG", icon: ArrowRightLeft, count: state?.trades.length ?? 0 },
-                { key: "basket", label: "BASKET", icon: Layers, count: basket?.config.tokens.length ?? 0 },
-                { key: "dynamic", label: "DYNAMIC WEIGHT", icon: TrendingUp },
-                { key: "settings", label: "SETTINGS", icon: Settings },
-              ]}
-            />
+            {/* Tab bar — basket actions ride along on the right when BASKET is active */}
+            <div className="flex items-center justify-between gap-3 border-b border-divider pr-4 flex-wrap">
+              <Tabs
+                active={rightTab}
+                onChange={(k) => { setRightTab(k); if (k === "trades") setTradePage(0); }}
+                tabs={[
+                  { key: "basket", label: "BASKET", icon: Layers, count: basket?.config.tokens.length ?? 0 },
+                  { key: "dynamic", label: "DYNAMIC WEIGHT", icon: TrendingUp },
+                  { key: "trades", label: "REBALANCE LOG", icon: ArrowRightLeft, count: state?.trades.length ?? 0 },
+                  { key: "settings", label: "SETTINGS", icon: Settings },
+                ]}
+              />
+              {rightTab === "basket" && (
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {rebalanceMsg && (
+                    <span className={`text-[10.5px] ${rebalanceMsg.ok ? "text-good" : "text-bad"}`}>{rebalanceMsg.text}</span>
+                  )}
+                  <button
+                    onClick={triggerRebalance}
+                    disabled={rebalancing || !state?.botState.running}
+                    title={!state?.botState.running ? "Start the bot first" : "Force rebalance now"}
+                    className="flex items-center gap-1.5 text-[10.5px] text-muted hover:text-cyan border border-cardline hover:border-cyan-line rounded-md transition-colors disabled:opacity-40"
+                    style={{ padding: "5px 9px" }}
+                  >
+                    <RefreshCw className={rebalancing ? "animate-spin" : ""} style={{ width: 13, height: 13 }} />
+                    {rebalancing ? "Rebalancing…" : "Rebalance"}
+                  </button>
+                  <button
+                    onClick={openBasketEditor}
+                    className="flex items-center gap-1.5 text-[10.5px] text-muted hover:text-cyan border border-cardline hover:border-cyan-line rounded-md transition-colors"
+                    style={{ padding: "5px 9px" }}
+                  >
+                    <Pencil style={{ width: 13, height: 13 }} /> Edit basket
+                  </button>
+                </div>
+              )}
+              {rightTab === "trades" && (state?.trades.length ?? 0) > 0 && (
+                <button
+                  onClick={clearLogs}
+                  title="Clear the rebalance log"
+                  className={`flex items-center gap-1.5 text-[10.5px] rounded-md transition-colors flex-shrink-0 border ${
+                    clearArmed
+                      ? "text-bad bg-[#1a0d10] border-[#3a1418] hover:bg-[#231013]"
+                      : "text-muted hover:text-bad border-cardline hover:border-[#3a1418]"
+                  }`}
+                  style={{ padding: "5px 9px" }}
+                >
+                  <Trash2 style={{ width: 13, height: 13 }} /> {clearArmed ? "Confirm clear" : "Clear logs"}
+                </button>
+              )}
+            </div>
 
             {/* Rebalance log tab */}
             {rightTab === "trades" && (
@@ -695,9 +726,17 @@ function Dashboard() {
                               </div>
                               <span className="text-[10px] text-dim">{formatTime(t.timestamp)}</span>
                             </div>
-                            {t.inputSol > 0 && (
-                              <div className="text-[10px] text-dim">
-                                {t.inputSol.toFixed(4)} SOL value swapped
+                            {(t.inputSol > 0 || (t.status === "confirmed" && t.profitSol !== 0)) && (
+                              <div className="flex items-center justify-between text-[10px]">
+                                <span className="text-dim">
+                                  {t.inputSol > 0 ? `${t.inputSol.toFixed(4)} SOL value swapped` : ""}
+                                </span>
+                                {t.status === "confirmed" && t.profitSol !== 0 && (
+                                  <span className={`tabular-nums ${t.profitSol > 0 ? "text-good" : "text-bad"}`}>
+                                    {t.profitSol > 0 ? "+" : ""}{t.profitSol.toFixed(4)} SOL
+                                    {t.profitBps ? ` · ${t.profitBps > 0 ? "+" : ""}${t.profitBps} bps` : ""}
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
@@ -728,147 +767,107 @@ function Dashboard() {
               </>
             )}
 
-            {/* Basket tab — holdings + actions only */}
+            {/* Basket tab — holdings table only (actions live in the tab bar) */}
             {rightTab === "basket" && (
-              <HoldingsTable
-                basket={basket}
-                state={state}
-                rebalancing={rebalancing}
-                rebalanceMsg={rebalanceMsg}
-                basketError={basketError}
-                onRebalance={triggerRebalance}
-                onEdit={openBasketEditor}
-                onUpdateWeight={updateWeight}
-                onRemoveToken={removeToken}
-              />
+              <HoldingsTable basket={basket} basketError={basketError} />
             )}
 
             {/* Dynamic Weight tab */}
             {rightTab === "dynamic" && (
               <div className="p-4 space-y-5">
-                {/* Dynamic weight token */}
+                {/* ── PROFIT-TAKING CURVE — hero chart ── */}
                 <div>
-                  <div className="text-[11px] tracking-wide text-muted mb-3 flex items-center gap-1.5">
-                    <CircleDollarSign className="w-3.5 h-3.5" /> DYNAMIC WEIGHT TOKEN
-                  </div>
-                  <div className="space-y-2">
-                    {dynMintSymbol && dynMintInput && (
-                      <div className="text-[11px] text-muted">
-                        Current: <span className="text-ink">{dynMintSymbol}</span>
-                        <span className="text-dim ml-1.5">{dynMintInput.slice(0, 6)}…</span>
-                      </div>
-                    )}
-                    <div className="flex gap-2">
-                      <input
-                        value={dynMintInput}
-                        onChange={(e) => setDynMintInput(e.target.value)}
-                        placeholder="Token mint address"
-                        className={`${cyInput} flex-1`}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-[11px] tracking-wide text-muted flex items-center gap-1.5">
+                      <BarChart3 className="w-3.5 h-3.5" /> PROFIT-TAKING CURVE
+                    </span>
+                    <span className="text-[10px] text-dim flex items-center gap-1.5">
+                      cap above max
+                      <input type="number" min="0" max="100" step="1"
+                        value={curveCapEditing}
+                        onChange={(e) => setCurveCapEditing(parseFloat(e.target.value) || 0)}
+                        className="w-12 bg-[#0a1019] border border-cardline rounded px-1.5 py-0.5 text-right text-ink focus:outline-none focus:border-cyan-line tabular-nums"
                       />
-                      <button onClick={lookupDynMint} disabled={!dynMintInput.trim() || dynMintLooking}
-                        className="px-3 py-1.5 rounded text-[11px] text-muted hover:text-cyan bg-[#0a1019] border border-cardline hover:border-cyan-line disabled:opacity-50 transition-colors whitespace-nowrap">
-                        {dynMintLooking ? "…" : "Lookup"}
-                      </button>
-                    </div>
-                    {dynMintMsg && <p className="text-[11px] text-warn/80">{dynMintMsg}</p>}
-                    <button onClick={saveDynMint} disabled={!dynMintInput.trim()}
-                      className="w-full py-1.5 rounded-lg text-[11px] text-cyan bg-cyan-bg border border-cyan-line hover:bg-[#093341] transition-colors disabled:opacity-50">
-                      Save token
-                    </button>
+                      %
+                    </span>
                   </div>
-                </div>
 
-                {/* HWM */}
-                <div className="border-t border-divider pt-4">
-                  <div className="text-[11px] tracking-wide text-muted mb-3 flex items-center gap-1.5">
-                    <TrendingUp className="w-3.5 h-3.5" /> HIGH-WATER MARK
-                  </div>
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] text-dim">Profit lock enabled</span>
-                      <button
-                        onClick={() => saveBasketSettings({ hwmEnabled: !(basket?.config.hwmEnabled ?? false) })}
-                        className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${basket?.config.hwmEnabled ? "bg-cyan" : "bg-[#1a2a36]"}`}
-                      >
-                        <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${basket?.config.hwmEnabled ? "left-[18px]" : "left-0.5"}`} />
-                      </button>
-                    </div>
-                    {basket?.config.hwmEnabled && (
-                      <label className="block">
-                        <span className="text-[11px] text-dim block mb-1">Decay half-life (days)</span>
-                        <input type="number" min="1" max="90" step="1"
-                          key={basket.config.hwmHalfLifeDays}
-                          defaultValue={basket.config.hwmHalfLifeDays ?? 7}
-                          onBlur={(e) => saveBasketSettings({ hwmHalfLifeDays: parseFloat(e.target.value) })}
-                          className={cyInput}
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
-
-                {/* Curve editor */}
-                <div className="border-t border-divider pt-4">
-                  <div className="text-[11px] tracking-wide text-muted mb-3 flex items-center gap-1.5">
-                    <BarChart3 className="w-3.5 h-3.5" /> PROFIT-TAKING CURVE
-                  </div>
                   {curveEditing && (
                     <>
-                      <table className="w-full text-[11px] mb-2">
-                        <thead>
-                          <tr className="text-dim border-b border-divider">
-                            <th className="text-left pb-1.5 font-normal">PnL %</th>
-                            <th className="text-left pb-1.5 font-normal pl-2">{dynMintSymbol ?? "Token"} %</th>
-                            <th className="pb-1.5 w-6" />
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-divider">
-                          {curveEditing.map((pt, i) => (
-                            <tr key={i}>
-                              <td className="py-1 pr-2">
-                                <input
-                                  type="number" step="1"
-                                  value={pt[0]}
-                                  onChange={(e) => setCurveEditing((prev) => prev!.map((p, j) => j === i ? [parseFloat(e.target.value) || 0, p[1]] : p))}
-                                  className="w-full bg-[#0a1019] border border-cardline rounded px-2 py-0.5 text-ink focus:outline-none focus:border-cyan-line"
-                                />
-                              </td>
-                              <td className="py-1 pl-2 pr-2">
-                                <input
-                                  type="number" min="0" max="100" step="1"
-                                  value={pt[1]}
-                                  onChange={(e) => setCurveEditing((prev) => prev!.map((p, j) => j === i ? [p[0], parseFloat(e.target.value) || 0] : p))}
-                                  className="w-full bg-[#0a1019] border border-cardline rounded px-2 py-0.5 text-ink focus:outline-none focus:border-cyan-line"
-                                />
-                              </td>
-                              <td className="py-1 text-right">
-                                <button
-                                  onClick={() => setCurveEditing((prev) => prev!.filter((_, j) => j !== i))}
-                                  className="text-dim hover:text-bad transition-colors"
-                                >
-                                  <X className="w-3.5 h-3.5" />
-                                </button>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                      <button
-                        onClick={() => setCurveEditing((prev) => [...prev!, [0, 0]])}
-                        className="flex items-center gap-1 text-[11px] text-dim hover:text-cyan transition-colors mb-3"
-                      >
-                        <Plus className="w-3 h-3" /> Add point
-                      </button>
-                      <label className="block mb-3">
-                        <span className="text-[11px] text-dim block mb-1">Cap above max PnL (%)</span>
-                        <input type="number" min="0" max="100" step="1"
-                          value={curveCapEditing}
-                          onChange={(e) => setCurveCapEditing(parseFloat(e.target.value) || 0)}
-                          className={cyInput}
-                        />
-                      </label>
-                      {curveError && <p className="text-[11px] text-bad mb-2">{curveError}</p>}
-                      <div className="flex gap-2">
+                      {/* chart */}
+                      {(() => {
+                        const pts = [...curveEditing].sort((a, b) => a[0] - b[0]);
+                        const W = 620, H = 210, L = 42, R = 608, T = 16, B = 182;
+                        const xs = pts.map((p) => p[0]);
+                        const ys = pts.map((p) => p[1]);
+                        const minX = Math.min(...xs), maxX = Math.max(...xs);
+                        const maxY = Math.max(...ys, 1);
+                        const sx = (v: number) => (maxX === minX ? (L + R) / 2 : L + ((v - minX) / (maxX - minX)) * (R - L));
+                        const sy = (v: number) => B - (v / maxY) * (B - T);
+                        const line = pts.map((p) => `${sx(p[0]).toFixed(1)},${sy(p[1]).toFixed(1)}`).join(" ");
+                        const area = pts.length
+                          ? `${sx(pts[0][0]).toFixed(1)},${B} ${line} ${sx(pts[pts.length - 1][0]).toFixed(1)},${B}`
+                          : "";
+                        const grid = [0.25, 0.5, 0.75].map((f) => B - f * (B - T));
+                        return (
+                          <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto mb-3" style={{ maxHeight: 230 }}>
+                            {grid.map((gy, i) => (
+                              <line key={i} x1={L} y1={gy} x2={R} y2={gy} stroke="#0d2230" strokeDasharray="3 4" />
+                            ))}
+                            <line x1={L} y1={T} x2={L} y2={B} stroke="#143040" />
+                            <line x1={L} y1={B} x2={R} y2={B} stroke="#143040" />
+                            {pts.length >= 2 && <polygon points={area} fill="#102a33" />}
+                            {pts.length >= 2 && <polyline points={line} fill="none" stroke="#22d3ee" strokeWidth={2.5} />}
+                            {pts.map((p, i) => (
+                              <g key={i}>
+                                <circle cx={sx(p[0])} cy={sy(p[1])} r={4.5} fill="#22d3ee" />
+                                <text x={sx(p[0])} y={sy(p[1]) - 8} fill="#6b8ba0" fontSize={9} fontFamily="monospace" textAnchor="middle">{p[1]}</text>
+                                <text x={sx(p[0])} y={B + 13} fill="#4f7088" fontSize={9} fontFamily="monospace" textAnchor="middle">{p[0]}</text>
+                              </g>
+                            ))}
+                            <text x={6} y={20} fill="#4f7088" fontSize={9} fontFamily="monospace">{dynMintSymbol ?? "Token"}%</text>
+                            <text x={R - 30} y={H - 4} fill="#4f7088" fontSize={9} fontFamily="monospace">PnL%</text>
+                          </svg>
+                        );
+                      })()}
+
+                      {/* editable breakpoint chips */}
+                      <div className="flex flex-wrap items-center gap-2">
+                        {curveEditing.map((pt, i) => (
+                          <div key={i} className="flex items-center gap-1 bg-[#0a1019] border border-cardline rounded-md pl-2 pr-1 py-1">
+                            <input
+                              type="number" step="1"
+                              value={pt[0]}
+                              onChange={(e) => setCurveEditing((prev) => prev!.map((p, j) => j === i ? [parseFloat(e.target.value) || 0, p[1]] : p))}
+                              className="w-9 bg-transparent text-right text-[11px] text-ink focus:outline-none tabular-nums"
+                            />
+                            <span className="text-dim text-[11px]">→</span>
+                            <input
+                              type="number" min="0" max="100" step="1"
+                              value={pt[1]}
+                              onChange={(e) => setCurveEditing((prev) => prev!.map((p, j) => j === i ? [p[0], parseFloat(e.target.value) || 0] : p))}
+                              className="w-8 bg-transparent text-right text-[11px] text-ink focus:outline-none tabular-nums"
+                            />
+                            <span className="text-dim text-[10px]">%</span>
+                            <button
+                              onClick={() => setCurveEditing((prev) => prev!.filter((_, j) => j !== i))}
+                              aria-label="Remove curve point"
+                              className="text-dim hover:text-bad transition-colors ml-0.5"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => setCurveEditing((prev) => [...prev!, [0, 0]])}
+                          className="flex items-center gap-1 text-[11px] text-cyan bg-cyan-bg border border-dashed border-cyan-line rounded-md px-2.5 py-1 hover:bg-[#093341] transition-colors"
+                        >
+                          <Plus className="w-3 h-3" /> point
+                        </button>
+                      </div>
+
+                      {curveError && <p className="text-[11px] text-bad mt-2">{curveError}</p>}
+                      <div className="flex gap-2 mt-3">
                         <button
                           onClick={() => { setCurveEditing(DEFAULT_CURVE.map((p) => [p[0], p[1]])); setCurveCapEditing(30); setCurveError(null); }}
                           className="flex-1 py-1.5 rounded-lg text-[11px] text-muted hover:text-cyan bg-[#0a1019] border border-cardline hover:border-cyan-line transition-colors"
@@ -887,43 +886,106 @@ function Dashboard() {
                   )}
                 </div>
 
-                {/* Reserve floor */}
-                <div className="border-t border-divider pt-4">
-                  <div className="text-[11px] tracking-wide text-muted mb-3 flex items-center gap-1.5">
-                    <BarChart3 className="w-3.5 h-3.5" /> RESERVE FLOOR
-                  </div>
-                  <div className="space-y-2">
-                    {reserveMintSymbol && reserveMintInput && (
-                      <div className="text-[11px] text-muted">
-                        Current: <span className="text-ink">{reserveMintSymbol}</span>
-                        <span className="text-dim ml-1.5">{reserveMintInput.slice(0, 6)}…</span>
+                {/* ── footer settings grid ── */}
+                <div className="border-t border-divider pt-4 grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-5">
+                  {/* Dynamic weight token */}
+                  <div>
+                    <div className="text-[11px] tracking-wide text-muted mb-2 flex items-center gap-1.5">
+                      <CircleDollarSign className="w-3.5 h-3.5" /> DYNAMIC WEIGHT TOKEN
+                    </div>
+                    {dynMintSymbol && dynMintInput && (
+                      <div className="text-[11px] text-muted mb-1.5">
+                        Current: <span className="text-ink">{dynMintSymbol}</span>
+                        <span className="text-dim ml-1.5">{dynMintInput.slice(0, 6)}…</span>
                       </div>
                     )}
                     <div className="flex gap-2">
                       <input
+                        value={dynMintInput}
+                        onChange={(e) => setDynMintInput(e.target.value)}
+                        placeholder="Token mint address"
+                        className={`${cyInput} flex-1 min-w-0`}
+                      />
+                      <button onClick={lookupDynMint} disabled={!dynMintInput.trim() || dynMintLooking}
+                        className="px-3 py-1.5 rounded text-[11px] text-muted hover:text-cyan bg-[#0a1019] border border-cardline hover:border-cyan-line disabled:opacity-50 transition-colors whitespace-nowrap">
+                        {dynMintLooking ? "…" : "Lookup"}
+                      </button>
+                      <button onClick={saveDynMint} disabled={!dynMintInput.trim()}
+                        className="px-3 py-1.5 rounded text-[11px] text-cyan bg-cyan-bg border border-cyan-line hover:bg-[#093341] disabled:opacity-50 transition-colors whitespace-nowrap">
+                        Save
+                      </button>
+                    </div>
+                    {dynMintMsg && <p className="text-[11px] text-warn/80 mt-1.5">{dynMintMsg}</p>}
+                  </div>
+
+                  {/* HWM */}
+                  <div>
+                    <div className="text-[11px] tracking-wide text-muted mb-2 flex items-center gap-1.5">
+                      <TrendingUp className="w-3.5 h-3.5" /> HIGH-WATER MARK
+                    </div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[11px] text-dim">Profit lock enabled</span>
+                      <button
+                        onClick={() => saveBasketSettings({ hwmEnabled: !(basket?.config.hwmEnabled ?? false) })}
+                        role="switch" aria-checked={!!basket?.config.hwmEnabled} aria-label="Profit lock (high-water mark)"
+                        className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${basket?.config.hwmEnabled ? "bg-cyan" : "bg-[#1a2a36]"}`}
+                      >
+                        <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${basket?.config.hwmEnabled ? "left-[18px]" : "left-0.5"}`} />
+                      </button>
+                    </div>
+                    {basket?.config.hwmEnabled && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] text-dim">Decay half-life</span>
+                        <span className="flex items-center gap-1.5">
+                          <input type="number" min="1" max="90" step="1"
+                            key={basket.config.hwmHalfLifeDays}
+                            defaultValue={basket.config.hwmHalfLifeDays ?? 7}
+                            onBlur={(e) => saveBasketSettings({ hwmHalfLifeDays: parseFloat(e.target.value) })}
+                            className="w-14 bg-[#0a1019] border border-cardline rounded px-2 py-1 text-right text-[11px] text-ink focus:outline-none focus:border-cyan-line tabular-nums"
+                          />
+                          <span className="text-[10px] text-dim">days</span>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Reserve floor */}
+                  <div className="md:col-span-2">
+                    <div className="text-[11px] tracking-wide text-muted mb-2 flex items-center gap-1.5">
+                      <BarChart3 className="w-3.5 h-3.5" /> RESERVE FLOOR
+                    </div>
+                    {reserveMintSymbol && reserveMintInput && (
+                      <div className="text-[11px] text-muted mb-1.5">
+                        Current: <span className="text-ink">{reserveMintSymbol}</span>
+                        <span className="text-dim ml-1.5">{reserveMintInput.slice(0, 6)}…</span>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <input
                         value={reserveMintInput}
                         onChange={(e) => setReserveMintInput(e.target.value)}
                         placeholder="Reserve token mint (leave blank to disable)"
-                        className={`${cyInput} flex-1`}
+                        className={`${cyInput} flex-1 min-w-[160px]`}
                       />
                       <button onClick={lookupReserveMint} disabled={!reserveMintInput.trim() || reserveMintLooking}
                         className="px-3 py-1.5 rounded text-[11px] text-muted hover:text-cyan bg-[#0a1019] border border-cardline hover:border-cyan-line disabled:opacity-50 transition-colors whitespace-nowrap">
                         {reserveMintLooking ? "…" : "Lookup"}
                       </button>
+                      <span className="flex items-center gap-1.5">
+                        <span className="text-[10px] text-dim">min</span>
+                        <input type="number" min="0" max="100" step="1"
+                          value={reserveFloorInput}
+                          onChange={(e) => setReserveFloorInput(parseFloat(e.target.value) || 0)}
+                          className="w-14 bg-[#0a1019] border border-cardline rounded px-2 py-1 text-right text-[11px] text-ink focus:outline-none focus:border-cyan-line tabular-nums"
+                        />
+                        <span className="text-[10px] text-dim">%</span>
+                      </span>
+                      <button onClick={saveReserveFloor}
+                        className="px-3 py-1.5 rounded text-[11px] text-cyan bg-cyan-bg border border-cyan-line hover:bg-[#093341] transition-colors whitespace-nowrap">
+                        Save
+                      </button>
                     </div>
-                    {reserveMintMsg && <p className="text-[11px] text-warn/80">{reserveMintMsg}</p>}
-                    <label className="block">
-                      <span className="text-[11px] text-dim block mb-1">Minimum weight (%)</span>
-                      <input type="number" min="0" max="100" step="1"
-                        value={reserveFloorInput}
-                        onChange={(e) => setReserveFloorInput(parseFloat(e.target.value) || 0)}
-                        className={cyInput}
-                      />
-                    </label>
-                    <button onClick={saveReserveFloor}
-                      className="w-full py-1.5 rounded-lg text-[11px] text-cyan bg-cyan-bg border border-cyan-line hover:bg-[#093341] transition-colors">
-                      Save reserve floor
-                    </button>
+                    {reserveMintMsg && <p className="text-[11px] text-warn/80 mt-1.5">{reserveMintMsg}</p>}
                   </div>
                 </div>
               </div>
@@ -1000,6 +1062,7 @@ function Dashboard() {
                       </td>
                       <td className="py-1.5 pl-2 text-right">
                         <button onClick={() => setEditorTokens((prev) => prev.filter((_, j) => j !== i))}
+                          aria-label="Remove token"
                           className="text-dim hover:text-bad transition-colors">
                           <X className="w-3.5 h-3.5" />
                         </button>

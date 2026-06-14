@@ -71,6 +71,11 @@ router.post("/stop", (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+router.post("/trades/clear", (_req: Request, res: Response) => {
+  store.clearTrades();
+  res.json({ ok: true });
+});
+
 // ── Basket ────────────────────────────────────────────────────────────────────
 
 router.get("/basket", (_req: Request, res: Response) => {

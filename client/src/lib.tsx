@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Check, Copy, X } from "lucide-react";
+import pkg from "../package.json";
 
-export const SOLSCAN_TX = "https://solscan.io/tx/";
-
-export const APP_VERSION = "v3.0.0";
+// Tracks client/package.json — bump the version there and the header pill follows.
+export const APP_VERSION = `v${pkg.version}`;
 
 export function formatSol(n: number) {
   return n.toFixed(4);
@@ -76,7 +76,7 @@ export function Modal({ title, onClose, children, wide }: { title: string; onClo
       <div className={`bg-card border border-cardline rounded-card w-full shadow-2xl ${wide ? "max-w-xl" : "max-w-md"}`}>
         <div className="flex items-center justify-between px-5 py-4 border-b border-divider">
           <span className="text-sm font-semibold text-ink">{title}</span>
-          <button onClick={onClose} className="text-dim hover:text-ink transition-colors">
+          <button onClick={onClose} aria-label="Close dialog" className="text-dim hover:text-ink transition-colors">
             <X className="w-4 h-4" />
           </button>
         </div>

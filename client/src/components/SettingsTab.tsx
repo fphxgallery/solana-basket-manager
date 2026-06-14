@@ -110,8 +110,8 @@ export function SettingsTab(p: SettingsTabProps) {
         </Panel>
       </div>
 
-      {/* RIGHT — combined Telegram + Daily Report */}
-      <div className="bg-card border border-cardline rounded-card p-4 self-start max-w-[460px] w-full">
+      {/* RIGHT — combined Telegram + Daily Report (stretches to match the left column) */}
+      <div className="bg-card border border-cardline rounded-card p-4 w-full">
         {/* TELEGRAM */}
         <div className="flex items-center gap-1.5 text-[11px] tracking-wide text-muted mb-3">
           <Send className="w-3.5 h-3.5" /> TELEGRAM
@@ -160,6 +160,7 @@ export function SettingsTab(p: SettingsTabProps) {
               <span className="text-[11px] text-dim">Scheduled</span>
               <button
                 onClick={() => p.onSaveSchedule({ enabled: !p.reportEnabled })}
+                role="switch" aria-checked={p.reportEnabled} aria-label="Daily report schedule"
                 className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${p.reportEnabled ? "bg-cyan" : "bg-[#1a2a36]"}`}
               >
                 <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${p.reportEnabled ? "left-[18px]" : "left-0.5"}`} />

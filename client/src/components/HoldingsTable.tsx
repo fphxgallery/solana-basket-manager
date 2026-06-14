@@ -1,27 +1,13 @@
-import { RefreshCw, Pencil, AlertTriangle, X } from "lucide-react";
-import type { BasketState, AppState } from "../types.ts";
+import { AlertTriangle } from "lucide-react";
+import type { BasketState } from "../types.ts";
 import { formatSol, truncate, formatTime } from "../lib.tsx";
 
 export function HoldingsTable({
   basket,
-  state,
-  rebalancing,
-  rebalanceMsg,
   basketError,
-  onRebalance,
-  onEdit,
-  onUpdateWeight,
-  onRemoveToken,
 }: {
   basket: BasketState | null;
-  state: AppState | null;
-  rebalancing: boolean;
-  rebalanceMsg: { ok: boolean; text: string } | null;
   basketError: string | null;
-  onRebalance: () => void;
-  onEdit: () => void;
-  onUpdateWeight: (mint: string, weight: number) => void;
-  onRemoveToken: (mint: string) => void;
 }) {
   const tokens = basket?.config.tokens ?? [];
   const threshold = basket?.config.driftThresholdPct ?? 5;
@@ -29,7 +15,6 @@ export function HoldingsTable({
   const reserveMint = basket?.config.reserveMint;
   const floorPct = basket?.config.reserveFloorPct ?? 0;
   const totalWeight = tokens.reduce((s, t) => s + t.targetWeight, 0);
-  const running = !!state?.botState.running;
 
   // shared bar scale so per-token allocation bars are comparable
   const maxW = Math.max(
@@ -50,45 +35,15 @@ export function HoldingsTable({
 
   return (
     <div className="p-4">
-      {/* ── action strip — bounded band, hairline divider below ── */}
-      <div className="flex items-start justify-between pb-3.5 border-b border-divider">
-        <div className="min-w-0">
-          <div className="text-[11px] tracking-wide text-muted">
-            HOLDINGS
-            {basket?.totalValueSol ? (
-              <span className="text-dim"> · ≈ {formatSol(basket.totalValueSol)} SOL total</span>
-            ) : null}
-          </div>
-          <div className="mt-1 text-[10px] text-dim">
-            {basket?.lastRebalanceAt ? <>last {formatTime(basket.lastRebalanceAt)}</> : <>no rebalance yet</>}
-            {nextForced && <> · next forced {nextForced}</>}
-          </div>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          {rebalanceMsg && (
-            <span className={`text-[10.5px] ${rebalanceMsg.ok ? "text-good" : "text-bad"}`}>{rebalanceMsg.text}</span>
-          )}
-          <button
-            onClick={onRebalance}
-            disabled={rebalancing || !running}
-            title={!running ? "Start the bot first" : "Force rebalance now"}
-            className="flex items-center gap-1.5 text-[10.5px] text-muted hover:text-cyan border border-cardline hover:border-cyan-line rounded-md transition-colors disabled:opacity-40"
-            style={{ padding: "5px 9px" }}
-          >
-            <RefreshCw className={rebalancing ? "animate-spin" : ""} style={{ width: 13, height: 13 }} />
-            {rebalancing ? "Rebalancing…" : "Rebalance"}
-          </button>
-          <button
-            onClick={onEdit}
-            className="flex items-center gap-1.5 text-[10.5px] text-muted hover:text-cyan border border-cardline hover:border-cyan-line rounded-md transition-colors"
-            style={{ padding: "5px 9px" }}
-          >
-            <Pencil style={{ width: 13, height: 13 }} /> Edit basket
-          </button>
-        </div>
+      {/* one-line holdings summary */}
+      <div className="flex items-center flex-wrap gap-x-1 text-[10px] text-dim pb-3">
+        <span className="text-[11px] tracking-wide text-muted">HOLDINGS</span>
+        {basket?.totalValueSol ? <span>· ≈ {formatSol(basket.totalValueSol)} SOL total</span> : null}
+        <span>· {basket?.lastRebalanceAt ? <>last {formatTime(basket.lastRebalanceAt)}</> : <>no rebalance yet</>}</span>
+        {nextForced && <span>· next forced {nextForced}</span>}
       </div>
 
-      <div className="pt-3.5">
+      <div>
         {!tokens.length ? (
           <div className="py-8 text-center text-dim text-sm">No tokens configured — add one to start</div>
         ) : (
@@ -109,7 +64,6 @@ export function HoldingsTable({
                     <th className="text-right pb-2 font-normal">Current %</th>
                     <th className="text-right pb-2 font-normal">Target %</th>
                     <th className="text-right pb-2 font-normal">Drift</th>
-                    <th className="pb-2" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-divider">
@@ -151,15 +105,7 @@ export function HoldingsTable({
                         <td className="text-right py-2 text-muted tabular-nums">{h ? h.balance.toFixed(4) : "—"}</td>
                         <td className="text-right py-2 text-muted tabular-nums">{h ? formatSol(h.valueSol) : "—"}</td>
                         <td className="text-right py-2 text-muted tabular-nums">{h ? cur.toFixed(1) + "%" : "—"}</td>
-                        <td className="text-right py-2">
-                          <input
-                            type="number" min="0" max="100" step="1"
-                            key={`${token.mint}-${tgt.toFixed(1)}`}
-                            defaultValue={tgt.toFixed(1)}
-                            onBlur={(e) => onUpdateWeight(token.mint, parseFloat(e.target.value))}
-                            className="w-16 bg-[#0a1019] border border-cardline rounded px-1.5 py-0.5 text-right text-ink focus:outline-none focus:border-cyan-line tabular-nums"
-                          />
-                        </td>
+                        <td className="text-right py-2 text-muted tabular-nums">{tgt.toFixed(1)}%</td>
                         <td className="text-right py-2">
                           {h ? (
                             <span
@@ -170,11 +116,6 @@ export function HoldingsTable({
                               {drift >= 0 ? "+" : ""}{drift.toFixed(1)}%
                             </span>
                           ) : "—"}
-                        </td>
-                        <td className="text-right py-2 pl-2">
-                          <button onClick={() => onRemoveToken(token.mint)} className="text-dim hover:text-bad transition-colors">
-                            <X className="w-3.5 h-3.5" />
-                          </button>
                         </td>
                       </tr>
                     );

@@ -11,7 +11,7 @@ export interface TabDef {
 
 export function Tabs({ tabs, active, onChange }: { tabs: TabDef[]; active: TabKey; onChange: (k: TabKey) => void }) {
   return (
-    <div className="flex items-center gap-6 border-b border-divider px-4">
+    <div className="flex items-center gap-6 px-4">
       {tabs.map((t) => {
         const on = active === t.key;
         const Icon = t.icon;

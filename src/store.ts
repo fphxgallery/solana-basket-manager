@@ -90,6 +90,15 @@ class Store extends EventEmitter {
     this.emit("update", "trade", t);
   }
 
+  clearTrades() {
+    this.trades = [];
+    this.totalTrades = 0;
+    this.totalProfitSol = 0;
+    saveTrades(this.trades);
+    // push a fresh snapshot so all connected clients drop the log
+    this.emit("update", "snapshot", this.snapshot());
+  }
+
   setBotState(patch: Partial<BotState>) {
     Object.assign(this.botState, patch);
     this.emit("update", "status", this.botState);

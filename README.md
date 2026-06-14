@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.0.0-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.1.0-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot.png)
 
@@ -124,6 +124,16 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.1.0
+- Feat: **Dynamic Weight tab redesigned** — the profit-taking curve is now a live chart (PnL% → token%) with editable breakpoint chips below it, and the token / high-water-mark / reserve-floor settings sit in a compact footer grid (replaces the old stack of full-width inputs)
+- Feat: **clear rebalance log** — a two-click "Clear logs" button on the Rebalance Log tab; new `POST /api/trades/clear` empties `data/trades.json` and broadcasts a fresh snapshot to all connected clients
+- Feat: rebalance log now shows per-swap profit (`+0.0031 SOL · +12 bps`, green/red) for confirmed trades
+- Change: tab order is now Basket · Dynamic Weight · Rebalance Log · Settings
+- Change: Rebalance / Edit basket buttons moved up onto the tab row; holdings header condensed to a single line
+- Change: holdings table target % is read-only and the per-row delete was removed — edit/remove tokens from the Edit basket modal instead
+- Change: Settings tab's Telegram + Daily Report card now fills the column height
+- Polish: accessibility labels on icon-only controls, tab row wraps on narrow widths, header version pill now derives from `package.json`, removed dead code
 
 ### v3.0.0
 - **Dashboard redesign ("Cyber grid")** — full visual overhaul of the React client: opaque cards over a page-level animated cyan conic gradient + grid, monospace data, cyan-monochrome theme with semantic color overrides (green gains/in-band, red loss/destructive, amber drifting/reserve, rainbow donut)
