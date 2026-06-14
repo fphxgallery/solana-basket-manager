@@ -94,6 +94,25 @@ export async function notify(message: string): Promise<void> {
   }
 }
 
+/** Send a rich message (Bot API 10.1+). Falls back to plain notify on error. */
+async function notifyRich(message: string): Promise<void> {
+  if (!config?.token || !config?.chatId) return;
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${config.token}/sendRichMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: config.chatId, rich_message: { html: message } }),
+    });
+    if (!res.ok) {
+      const err = await res.text();
+      console.warn("[telegram] sendRichMessage failed, falling back to sendMessage:", err);
+      await notify(message);
+    }
+  } catch (e) {
+    console.error("[telegram] notifyRich failed:", e);
+  }
+}
+
 /** Send the daily portfolio report. */
 export async function sendDailyReport(): Promise<void> {
   if (!config?.token || !config?.chatId) return;
@@ -105,24 +124,29 @@ export async function sendDailyReport(): Promise<void> {
 
   const date = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
-  let msg = `📊 <b>Daily Report — ${date}</b>\n`;
+  let msg = `<h3>📊 Daily Report — ${date}</h3>`;
 
   if (totalValueUsd > 0) {
-    msg += `\n💼 Portfolio: <b>$${totalValueUsd.toFixed(2)}</b>`;
-    if (totalValueSol > 0) msg += ` (${totalValueSol.toFixed(4)} SOL)`;
-    msg += `\n`;
+    let line = `💼 <b>$${totalValueUsd.toFixed(2)}</b>`;
+    const parts: string[] = [];
+    if (totalValueSol > 0) parts.push(`${totalValueSol.toFixed(4)} SOL`);
+    if (solUsd > 0) parts.push(`SOL $${solUsd.toFixed(2)}`);
+    if (parts.length) line += ` <i>· ${parts.join(" · ")}</i>`;
+    msg += `<p>${line}</p>`;
+  } else if (solUsd > 0) {
+    msg += `<p>💲 <i>SOL $${solUsd.toFixed(2)}</i></p>`;
   }
-  if (solUsd > 0) msg += `💲 SOL = $${solUsd.toFixed(2)}\n`;
 
   if (pnlUsd != null && pnlPctUsd != null) {
-    const sign = pnlUsd >= 0 ? "+" : "-";
+    const icon = pnlUsd >= 0 ? "📈" : "📉";
+    const arrow = pnlUsd >= 0 ? "▲" : "▼";
     const pctStr = pnlPctUsd >= 0 ? `+${pnlPctUsd.toFixed(2)}%` : `${pnlPctUsd.toFixed(2)}%`;
-    msg += `📈 P&amp;L: <b>${sign}$${Math.abs(pnlUsd).toFixed(2)}</b> (${pctStr})`;
+    let note = pctStr;
     if (baselineTimestamp) {
       const since = new Date(baselineTimestamp).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      msg += ` since ${since}`;
+      note += ` · since ${since}`;
     }
-    msg += `\n`;
+    msg += `<p>${icon} <b>${arrow}$${Math.abs(pnlUsd).toFixed(2)}</b> <i>(${note})</i></p>`;
   }
 
   if (basketConfig.hwmEnabled && hwmValueUsd != null && hwmCapturedAt != null) {
@@ -132,30 +156,24 @@ export async function sendDailyReport(): Promise<void> {
     const timeStr = toHalfLife > 0
       ? (toHalfLife >= 1 ? `${toHalfLife.toFixed(1)}d` : `${(toHalfLife * 24).toFixed(0)}h`) + " to ½"
       : "past ½-life";
-    msg += `🏔 Peak: <b>$${hwmValueUsd.toFixed(2)}</b> (${timeStr})\n`;
+    msg += `<p>🏔 <b>Peak $${hwmValueUsd.toFixed(2)}</b> <i>· ${timeStr}</i></p>`;
   }
 
   if (walletSol != null) {
-    msg += `🏦 Wallet: ${walletSol.toFixed(4)} SOL`;
-    if (solUsd > 0) msg += ` ($${(walletSol * solUsd).toFixed(2)})`;
-    msg += `\n`;
+    let line = `🏦 <b>${walletSol.toFixed(4)} SOL</b>`;
+    if (solUsd > 0) line += ` <i>($${(walletSol * solUsd).toFixed(2)})</i>`;
+    msg += `<p>${line}</p>`;
   }
 
   if (holdings.length > 0) {
-    msg += `\n<b>Holdings</b>\n<code>`;
-    // Find longest symbol for padding
-    const maxSym = Math.max(...holdings.map((h) => h.symbol.length), 6);
+    msg += `\n<table bordered striped>\n`;
+    msg += `<tr><th>Symbol</th><th align="right">Current</th><th align="right">Target</th><th align="right">Drift</th></tr>\n`;
     for (const h of holdings) {
-      const sym = h.symbol.padEnd(maxSym);
-      const cur = `${h.currentWeight.toFixed(1)}%`.padStart(6);
-      const tgt = `${h.targetWeight.toFixed(1)}%`.padStart(6);
-      const drift = h.driftPct >= 0
-        ? `+${h.driftPct.toFixed(1)}%`
-        : `${h.driftPct.toFixed(1)}%`;
-      msg += `${sym}  ${cur} → ${tgt}  (${drift})\n`;
+      const drift = h.driftPct >= 0 ? `+${h.driftPct.toFixed(1)}%` : `${h.driftPct.toFixed(1)}%`;
+      msg += `<tr><td>${h.symbol}</td><td align="right">${h.currentWeight.toFixed(1)}%</td><td align="right">${h.targetWeight.toFixed(1)}%</td><td align="right">${drift}</td></tr>\n`;
     }
-    msg += `</code>`;
+    msg += `</table>`;
   }
 
-  await notify(msg);
+  await notifyRich(msg);
 }
