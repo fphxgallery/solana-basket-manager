@@ -28,7 +28,7 @@ export function AppHeader({
       {/* identity — left */}
       <div className="flex items-center gap-2.5">
         <img src="/favicon.svg" className="w-5 h-5" alt="" />
-        <span className="text-sm font-semibold tracking-wide text-ink">basket-manager</span>
+        <span className="text-sm font-semibold tracking-[0.2em] title-gradient">BALLAST</span>
         <span className="px-1.5 py-0.5 rounded text-[10px] leading-none text-cyan bg-cyan-bg border border-cyan-line">
           {APP_VERSION}
         </span>

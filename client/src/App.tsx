@@ -99,7 +99,8 @@ function Login({ onSuccess }: { onSuccess: () => void }) {
         <form onSubmit={submit} className="bg-card border border-cardline rounded-card w-full max-w-sm p-6 shadow-2xl">
           <div className="flex items-center gap-2 mb-4">
             <KeyRound className="w-4 h-4 text-cyan" />
-            <span className="text-sm font-semibold text-ink">basket-manager — sign in</span>
+            <span className="text-sm font-semibold tracking-[0.2em] title-gradient">BALLAST</span>
+            <span className="text-sm font-semibold text-ink"> — sign in</span>
           </div>
           <input
             type="password"
