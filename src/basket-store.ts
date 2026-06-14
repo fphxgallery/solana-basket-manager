@@ -14,9 +14,12 @@ export interface BasketConfig {
   rebalanceIntervalHours: number; // forced rebalance cadence, default 24
   hwmEnabled: boolean;            // high-water mark profit lock, default false
   hwmHalfLifeDays: number;        // HWM decay half-life in days, default 7
-  curvePoints: Array<[number, number]>; // [pnlPct, usdcWeightPct] pairs, ascending by pnlPct
-  curveCap: number;               // USDC weight when pnlPct > last curve point, default 30
+  curvePoints: Array<[number, number]>; // [pnlPct, tokenWeightPct] pairs, ascending by pnlPct
+  curveCap: number;               // dynamic token weight when pnlPct > last curve point, default 30
   minSwapUsd: number;             // skip rebalance swaps worth less than this in USD, default 5
+  dynamicWeightMint: string;      // token that gets the dynamic profit-taking weight (default USDC)
+  reserveMint: string | null;     // token with a hard floor weight; null = disabled
+  reserveFloorPct: number;        // minimum weight % enforced for reserveMint
 }
 
 export interface TokenHolding {
@@ -33,6 +36,8 @@ export interface TokenHolding {
 
 const DATA_PATH = path.resolve(process.env.DATA_DIR ?? "./data", "basket.json");
 
+const USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
+
 const DEFAULTS: BasketConfig = {
   tokens: [],
   driftThresholdPct: 1,
@@ -42,6 +47,9 @@ const DEFAULTS: BasketConfig = {
   curvePoints: [[-20, 0], [-10, 5], [0, 10], [10, 15], [15, 20], [20, 25]],
   curveCap: 30,
   minSwapUsd: 5,
+  dynamicWeightMint: USDC_MINT,
+  reserveMint: null,
+  reserveFloorPct: 0,
 };
 
 class BasketStore extends EventEmitter {

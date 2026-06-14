@@ -123,7 +123,7 @@ router.put("/basket/tokens", (req: Request, res: Response) => {
 
 // Update basket settings (drift threshold, rebalance interval)
 router.patch("/basket/settings", (req: Request, res: Response) => {
-  const { driftThresholdPct, rebalanceIntervalHours, hwmEnabled, hwmHalfLifeDays, curvePoints, curveCap, minSwapUsd } = req.body as {
+  const { driftThresholdPct, rebalanceIntervalHours, hwmEnabled, hwmHalfLifeDays, curvePoints, curveCap, minSwapUsd, dynamicWeightMint, reserveMint, reserveFloorPct } = req.body as {
     driftThresholdPct?: number;
     rebalanceIntervalHours?: number;
     hwmEnabled?: boolean;
@@ -131,6 +131,9 @@ router.patch("/basket/settings", (req: Request, res: Response) => {
     curvePoints?: Array<[number, number]>;
     curveCap?: number;
     minSwapUsd?: number;
+    dynamicWeightMint?: string;
+    reserveMint?: string | null;
+    reserveFloorPct?: number;
   };
   const patch: Parameters<typeof basketStore.updateSettings>[0] = {};
   if (driftThresholdPct != null) {
@@ -193,6 +196,37 @@ router.patch("/basket/settings", (req: Request, res: Response) => {
       return;
     }
     patch.minSwapUsd = minSwapUsd;
+  }
+  if (dynamicWeightMint != null) {
+    if (typeof dynamicWeightMint !== "string" || !dynamicWeightMint.trim()) {
+      res.status(400).json({ error: "dynamicWeightMint must be a non-empty string" });
+      return;
+    }
+    try { new PublicKey(dynamicWeightMint); } catch {
+      res.status(400).json({ error: "dynamicWeightMint: invalid mint address" });
+      return;
+    }
+    patch.dynamicWeightMint = dynamicWeightMint;
+  }
+  if (reserveMint !== undefined) {
+    if (reserveMint !== null) {
+      if (typeof reserveMint !== "string") {
+        res.status(400).json({ error: "reserveMint must be a string or null" });
+        return;
+      }
+      try { new PublicKey(reserveMint); } catch {
+        res.status(400).json({ error: "reserveMint: invalid mint address" });
+        return;
+      }
+    }
+    patch.reserveMint = reserveMint;
+  }
+  if (reserveFloorPct != null) {
+    if (typeof reserveFloorPct !== "number" || reserveFloorPct < 0 || reserveFloorPct > 100) {
+      res.status(400).json({ error: "reserveFloorPct must be a number in [0, 100]" });
+      return;
+    }
+    patch.reserveFloorPct = reserveFloorPct;
   }
   basketStore.updateSettings(patch);
   res.json(basketStore.config);

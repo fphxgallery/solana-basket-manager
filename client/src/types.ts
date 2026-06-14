@@ -44,6 +44,9 @@ export interface BasketState {
     curvePoints: Array<[number, number]>;
     curveCap: number;
     minSwapUsd: number;
+    dynamicWeightMint: string;
+    reserveMint: string | null;
+    reserveFloorPct: number;
   };
   holdings: TokenHolding[];
   totalValueSol: number;

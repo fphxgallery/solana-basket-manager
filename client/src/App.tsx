@@ -238,6 +238,19 @@ function Dashboard() {
   const [curveSaving, setCurveSaving] = useState(false);
   const [curveError, setCurveError] = useState<string | null>(null);
   const curveInitRef = useRef(false);
+  // Dynamic weight token
+  const [dynMintInput, setDynMintInput] = useState("");
+  const [dynMintSymbol, setDynMintSymbol] = useState<string | null>(null);
+  const [dynMintLooking, setDynMintLooking] = useState(false);
+  const [dynMintMsg, setDynMintMsg] = useState<string | null>(null);
+  const dynMintInitRef = useRef(false);
+  // Reserve floor
+  const [reserveMintInput, setReserveMintInput] = useState("");
+  const [reserveMintSymbol, setReserveMintSymbol] = useState<string | null>(null);
+  const [reserveMintLooking, setReserveMintLooking] = useState(false);
+  const [reserveMintMsg, setReserveMintMsg] = useState<string | null>(null);
+  const [reserveFloorInput, setReserveFloorInput] = useState(0);
+  const reserveFloorInitRef = useRef(false);
   const [rebalancing, setRebalancing] = useState(false);
   const [rebalanceMsg, setRebalanceMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [valueHistory, setValueHistory] = useState<ValuePoint[]>([]);
@@ -297,6 +310,31 @@ function Dashboard() {
     }
   }, [basket]);
 
+  // Initialize dynamic weight token settings once
+  useEffect(() => {
+    if (!dynMintInitRef.current && basket?.config) {
+      const mint = basket.config.dynamicWeightMint ?? "";
+      setDynMintInput(mint);
+      const h = basket.holdings.find((hh) => hh.mint === mint);
+      if (h) setDynMintSymbol(h.symbol);
+      dynMintInitRef.current = true;
+    }
+  }, [basket]);
+
+  // Initialize reserve floor settings once
+  useEffect(() => {
+    if (!reserveFloorInitRef.current && basket?.config) {
+      const mint = basket.config.reserveMint ?? "";
+      setReserveMintInput(mint);
+      if (mint) {
+        const h = basket.holdings.find((hh) => hh.mint === mint);
+        if (h) setReserveMintSymbol(h.symbol);
+      }
+      setReserveFloorInput(basket.config.reserveFloorPct ?? 0);
+      reserveFloorInitRef.current = true;
+    }
+  }, [basket]);
+
   async function saveCurve() {
     if (!curveEditing) return;
     setCurveError(null);
@@ -324,6 +362,49 @@ function Dashboard() {
   }
 
   const DEFAULT_CURVE: Array<[number, number]> = [[-20, 0], [-10, 5], [0, 10], [10, 15], [15, 20], [20, 25]];
+
+  async function lookupDynMint() {
+    if (!dynMintInput.trim()) return;
+    setDynMintLooking(true);
+    setDynMintMsg(null);
+    try {
+      const r = await fetch(`/api/basket/token-info/${dynMintInput.trim()}`);
+      const d = await r.json() as { symbol: string | null };
+      if (d.symbol) { setDynMintSymbol(d.symbol); }
+      else setDynMintMsg("Symbol not found — mint may still be valid");
+    } catch {
+      setDynMintMsg("Lookup failed");
+    } finally {
+      setDynMintLooking(false);
+    }
+  }
+
+  async function saveDynMint() {
+    await saveBasketSettings({ dynamicWeightMint: dynMintInput.trim() });
+  }
+
+  async function lookupReserveMint() {
+    if (!reserveMintInput.trim()) return;
+    setReserveMintLooking(true);
+    setReserveMintMsg(null);
+    try {
+      const r = await fetch(`/api/basket/token-info/${reserveMintInput.trim()}`);
+      const d = await r.json() as { symbol: string | null };
+      if (d.symbol) { setReserveMintSymbol(d.symbol); }
+      else setReserveMintMsg("Symbol not found — mint may still be valid");
+    } catch {
+      setReserveMintMsg("Lookup failed");
+    } finally {
+      setReserveMintLooking(false);
+    }
+  }
+
+  async function saveReserveFloor() {
+    await saveBasketSettings({
+      reserveMint: reserveMintInput.trim() || null,
+      reserveFloorPct: reserveFloorInput,
+    });
+  }
 
   async function saveTelegram() {
     setTelegramError(null);
@@ -472,7 +553,7 @@ function Dashboard() {
     }
   }
 
-  async function saveBasketSettings(patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; hwmEnabled?: boolean; hwmHalfLifeDays?: number; minSwapUsd?: number }) {
+  async function saveBasketSettings(patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; hwmEnabled?: boolean; hwmHalfLifeDays?: number; minSwapUsd?: number; dynamicWeightMint?: string; reserveMint?: string | null; reserveFloorPct?: number }) {
     await fetch("/api/basket/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1184,6 +1265,38 @@ function Dashboard() {
             {/* Dynamic Weight tab */}
             {rightTab === "dynamic" && (
               <div className="p-4 space-y-5">
+                {/* Dynamic weight token */}
+                <div>
+                  <div className="text-xs text-gray-400 mb-3 flex items-center gap-1.5">
+                    <CircleDollarSign className="w-3.5 h-3.5" /> DYNAMIC WEIGHT TOKEN
+                  </div>
+                  <div className="space-y-2">
+                    {dynMintSymbol && dynMintInput && (
+                      <div className="text-xs text-gray-400">
+                        Current: <span className="text-white">{dynMintSymbol}</span>
+                        <span className="text-gray-600 ml-1.5 font-mono">{dynMintInput.slice(0, 6)}…</span>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        value={dynMintInput}
+                        onChange={(e) => setDynMintInput(e.target.value)}
+                        placeholder="Token mint address"
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-violet-500"
+                      />
+                      <button onClick={lookupDynMint} disabled={!dynMintInput.trim() || dynMintLooking}
+                        className="px-3 py-1.5 rounded text-xs bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 transition-colors whitespace-nowrap">
+                        {dynMintLooking ? "…" : "Lookup"}
+                      </button>
+                    </div>
+                    {dynMintMsg && <p className="text-xs text-yellow-400/80">{dynMintMsg}</p>}
+                    <button onClick={saveDynMint} disabled={!dynMintInput.trim()}
+                      className="w-full py-1.5 rounded-lg text-xs bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 border border-violet-500/20 transition-colors disabled:opacity-50">
+                      Save token
+                    </button>
+                  </div>
+                </div>
+
                 {/* HWM */}
                 <div>
                   <div className="text-xs text-gray-400 mb-3 flex items-center gap-1.5">
@@ -1224,7 +1337,7 @@ function Dashboard() {
                         <thead>
                           <tr className="text-gray-600 border-b border-gray-800">
                             <th className="text-left pb-1.5 font-normal">PnL %</th>
-                            <th className="text-left pb-1.5 font-normal pl-2">USDC %</th>
+                            <th className="text-left pb-1.5 font-normal pl-2">{dynMintSymbol ?? "Token"} %</th>
                             <th className="pb-1.5 w-6" />
                           </tr>
                         </thead>
@@ -1291,6 +1404,46 @@ function Dashboard() {
                       </div>
                     </>
                   )}
+                </div>
+
+                {/* Reserve floor */}
+                <div className="border-t border-gray-800 pt-4">
+                  <div className="text-xs text-gray-400 mb-3 flex items-center gap-1.5">
+                    <BarChart3 className="w-3.5 h-3.5" /> RESERVE FLOOR
+                  </div>
+                  <div className="space-y-2">
+                    {reserveMintSymbol && reserveMintInput && (
+                      <div className="text-xs text-gray-400">
+                        Current: <span className="text-white">{reserveMintSymbol}</span>
+                        <span className="text-gray-600 ml-1.5 font-mono">{reserveMintInput.slice(0, 6)}…</span>
+                      </div>
+                    )}
+                    <div className="flex gap-2">
+                      <input
+                        value={reserveMintInput}
+                        onChange={(e) => setReserveMintInput(e.target.value)}
+                        placeholder="Reserve token mint (leave blank to disable)"
+                        className="flex-1 bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white font-mono focus:outline-none focus:border-violet-500"
+                      />
+                      <button onClick={lookupReserveMint} disabled={!reserveMintInput.trim() || reserveMintLooking}
+                        className="px-3 py-1.5 rounded text-xs bg-gray-700 text-gray-300 hover:bg-gray-600 disabled:opacity-50 transition-colors whitespace-nowrap">
+                        {reserveMintLooking ? "…" : "Lookup"}
+                      </button>
+                    </div>
+                    {reserveMintMsg && <p className="text-xs text-yellow-400/80">{reserveMintMsg}</p>}
+                    <label className="block">
+                      <span className="text-xs text-gray-600 block mb-1">Minimum weight (%)</span>
+                      <input type="number" min="0" max="100" step="1"
+                        value={reserveFloorInput}
+                        onChange={(e) => setReserveFloorInput(parseFloat(e.target.value) || 0)}
+                        className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-violet-500"
+                      />
+                    </label>
+                    <button onClick={saveReserveFloor}
+                      className="w-full py-1.5 rounded-lg text-xs bg-violet-500/10 text-violet-400 hover:bg-violet-500/20 border border-violet-500/20 transition-colors">
+                      Save reserve floor
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

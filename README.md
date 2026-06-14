@@ -120,6 +120,11 @@ sudo systemctl status basket-manager
 
 ## Changelog
 
+### v2.3.0
+- Feat: configurable dynamic weight token — any basket token can now be the profit-taking target (previously hardcoded to USDC); set via "Dynamic weight token" on the Dynamic Weight tab
+- Feat: reserve floor — configure any token with a hard minimum weight % that the rebalancer will never drop below (option 2: parallel floor, does not steal from the configured target weight); set via "Reserve floor" on the Dynamic Weight tab
+- Primary use case: yield-bearing stablecoins (USDY, sUSDS, etc.) as both the dynamic target and the reserve — always earning yield on the floor, profits shift more into it automatically
+
 ### v2.2.5
 - Feat: daily Telegram report redesigned using Bot API 10.1 `sendRichMessage` — headings, `<p>` block layout, and a `<table bordered striped>` for holdings; falls back to standard `sendMessage` on error
 - Feat: P&L line now uses ▲/▼ arrow and 📈/📉 icon; portfolio, SOL price, peak, and wallet each on their own line

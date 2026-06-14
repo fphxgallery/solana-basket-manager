@@ -29,37 +29,62 @@ function dynamicUsdcWeight(pnlPct: number): number {
 
 /**
  * Returns effective target weights per mint.
- * If USDC is in the basket and pnlPct is known, USDC weight is adjusted
- * dynamically and all other tokens are rescaled proportionally to sum to 100%.
- * Falls back to static configured weights otherwise.
+ * The configured dynamicWeightMint (default USDC) gets its weight adjusted by
+ * the profit-taking curve when pnlPct is known; all other tokens are rescaled
+ * proportionally. A reserve floor is then enforced for reserveMint if configured.
+ * Falls back to static configured weights when pnlPct is unavailable.
  */
 function computeEffectiveWeights(
   tokens: Array<{ mint: string; targetWeight: number }>,
   pnlPct: number | null,
 ): Record<string, number> {
-  const usdcToken = tokens.find((t) => t.mint === CONFIG.USDC_MINT);
-  if (pnlPct == null || !usdcToken) {
-    return Object.fromEntries(tokens.map((t) => [t.mint, t.targetWeight]));
+  const { dynamicWeightMint, reserveMint, reserveFloorPct } = basketStore.config;
+  const dynMint = dynamicWeightMint || CONFIG.USDC_MINT;
+  const dynToken = tokens.find((t) => t.mint === dynMint);
+
+  let weights: Record<string, number>;
+
+  if (pnlPct == null || !dynToken) {
+    weights = Object.fromEntries(tokens.map((t) => [t.mint, t.targetWeight]));
+  } else {
+    const targetDynWeight = dynamicUsdcWeight(pnlPct);
+    const delta = targetDynWeight - dynToken.targetWeight;
+    if (Math.abs(delta) < 0.01) {
+      weights = Object.fromEntries(tokens.map((t) => [t.mint, t.targetWeight]));
+    } else {
+      // Rescale non-dynamic tokens proportionally so all weights sum to 100%
+      const others = tokens.filter((t) => t.mint !== dynMint);
+      const othersConfigTotal = others.reduce((s, t) => s + t.targetWeight, 0);
+      const newOthersTotal = 100 - targetDynWeight;
+      weights = {};
+      weights[dynMint] = targetDynWeight;
+      for (const t of others) {
+        weights[t.mint] = othersConfigTotal > 0
+          ? (t.targetWeight / othersConfigTotal) * newOthersTotal
+          : newOthersTotal / others.length;
+      }
+    }
   }
 
-  const targetUsdcWeight = dynamicUsdcWeight(pnlPct);
-  const delta = targetUsdcWeight - usdcToken.targetWeight;
-  if (Math.abs(delta) < 0.01) {
-    return Object.fromEntries(tokens.map((t) => [t.mint, t.targetWeight]));
+  // Apply reserve floor: reserveMint weight can never fall below reserveFloorPct
+  if (reserveMint && reserveFloorPct > 0) {
+    const reserveToken = tokens.find((t) => t.mint === reserveMint);
+    if (reserveToken) {
+      const current = weights[reserveMint] ?? reserveToken.targetWeight;
+      if (current < reserveFloorPct) {
+        const deficit = reserveFloorPct - current;
+        weights[reserveMint] = reserveFloorPct;
+        // Scale all other tokens down proportionally to absorb the deficit
+        const others = tokens.filter((t) => t.mint !== reserveMint);
+        const othersTotal = others.reduce((s, t) => s + (weights[t.mint] ?? t.targetWeight), 0);
+        for (const t of others) {
+          const w = weights[t.mint] ?? t.targetWeight;
+          weights[t.mint] = othersTotal > 0 ? w * (othersTotal - deficit) / othersTotal : 0;
+        }
+      }
+    }
   }
 
-  // Rescale non-USDC tokens proportionally so all weights sum to 100%
-  const nonUsdc = tokens.filter((t) => t.mint !== CONFIG.USDC_MINT);
-  const nonUsdcConfigTotal = nonUsdc.reduce((s, t) => s + t.targetWeight, 0);
-  const newNonUsdcTotal = 100 - targetUsdcWeight;
-
-  const weights: Record<string, number> = {};
-  weights[CONFIG.USDC_MINT] = targetUsdcWeight;
-  for (const t of nonUsdc) {
-    weights[t.mint] = nonUsdcConfigTotal > 0
-      ? (t.targetWeight / nonUsdcConfigTotal) * newNonUsdcTotal
-      : newNonUsdcTotal / nonUsdc.length;
-  }
   return weights;
 }
 
@@ -243,10 +268,12 @@ export async function refreshHoldings(
   const effectiveWeights = computeEffectiveWeights(tokens, pnlPctUsd);
 
   if (pnlPctUsd != null) {
-    const usdcDynamic = effectiveWeights[CONFIG.USDC_MINT];
-    const usdcConfig = tokens.find((t) => t.mint === CONFIG.USDC_MINT)?.targetWeight;
-    if (usdcDynamic != null && usdcConfig != null && Math.abs(usdcDynamic - usdcConfig) >= 0.1) {
-      console.log(`[basket] dynamic USDC weight: ${usdcDynamic.toFixed(1)}% (config: ${usdcConfig}%, pnl: ${pnlPctUsd >= 0 ? "+" : ""}${pnlPctUsd.toFixed(1)}% USD)`);
+    const dynMint = basketStore.config.dynamicWeightMint || CONFIG.USDC_MINT;
+    const dynWeight = effectiveWeights[dynMint];
+    const dynConfigWeight = tokens.find((t) => t.mint === dynMint)?.targetWeight;
+    const dynSymbol = tokens.find((t) => t.mint === dynMint)?.symbol ?? "dynamic";
+    if (dynWeight != null && dynConfigWeight != null && Math.abs(dynWeight - dynConfigWeight) >= 0.1) {
+      console.log(`[basket] dynamic ${dynSymbol} weight: ${dynWeight.toFixed(1)}% (config: ${dynConfigWeight}%, pnl: ${pnlPctUsd >= 0 ? "+" : ""}${pnlPctUsd.toFixed(1)}% USD)`);
     }
   }
 
