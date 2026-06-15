@@ -125,8 +125,10 @@ sudo systemctl status basket-manager
 
 ## Changelog
 
-### v3.1.x
+### v3.1.5
 - Rebalance log rows now show the transaction signature as a clickable **Solscan** link, filling the dead space between the route and timestamp
+
+### v3.1.0 – v3.1.4
 - New **BALLAST** rebrand: animated cyan gradient title and a hull-with-waterline logo (header + favicon)
 - Hero P&L bars relabeled to **ATH** plus a new **peak-decay** bar; both use spectrum gradient fills that track their value
 - Holdings drift pills that round to `0.0%` now render gray; donut recolored to an 11-stop warm→cool spectrum
