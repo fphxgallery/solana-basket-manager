@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.1.4-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.1.5-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -126,6 +126,7 @@ sudo systemctl status basket-manager
 ## Changelog
 
 ### v3.1.x
+- Rebalance log rows now show the transaction signature as a clickable **Solscan** link, filling the dead space between the route and timestamp
 - New **BALLAST** rebrand: animated cyan gradient title and a hull-with-waterline logo (header + favicon)
 - Hero P&L bars relabeled to **ATH** plus a new **peak-decay** bar; both use spectrum gradient fills that track their value
 - Holdings drift pills that round to `0.0%` now render gray; donut recolored to an 11-stop warm→cool spectrum

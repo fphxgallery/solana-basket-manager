@@ -5,6 +5,7 @@ import {
   BarChart3,
   Check,
   CircleDollarSign,
+  ExternalLink,
   KeyRound,
   Layers,
   Pencil,
@@ -720,10 +721,24 @@ function Dashboard() {
                       <div className="divide-y divide-divider">
                         {pageTrades.map((t) => (
                           <div key={t.id} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                            <div className="flex items-center justify-between mb-1">
+                            <div className="flex items-center gap-2 mb-1">
                               <div className="flex items-center gap-2">
                                 <TradeStatusBadge status={t.status} />
                                 <span className="text-[11px] text-ink">{t.route}</span>
+                              </div>
+                              <div className="flex-1 text-left ml-3">
+                                {t.bundleId && (
+                                  <a
+                                    href={`https://solscan.io/tx/${t.bundleId}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-1 text-[10px] text-dim hover:text-cyan transition-colors tabular-nums"
+                                    title={t.bundleId}
+                                  >
+                                    {truncate(t.bundleId, 12)}
+                                    <ExternalLink style={{ width: 9, height: 9 }} />
+                                  </a>
+                                )}
                               </div>
                               <span className="text-[10px] text-dim">{formatTime(t.timestamp)}</span>
                             </div>
