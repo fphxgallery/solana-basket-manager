@@ -82,7 +82,7 @@ router.get("/basket", (_req: Request, res: Response) => {
   res.json(basketSnapshot());
 });
 
-// 24h portfolio value history + current SOL/USD price
+// Portfolio value history (up to 90 days) + current SOL/USD price
 router.get("/basket/value-history", async (_req: Request, res: Response) => {
   const solUsd = await getSolUsd();
   res.json({ points: valueHistory, solUsd });

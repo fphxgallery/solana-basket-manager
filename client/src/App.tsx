@@ -183,7 +183,7 @@ function Dashboard() {
   const [rebalanceMsg, setRebalanceMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [valueHistory, setValueHistory] = useState<ValuePoint[]>([]);
   const [solUsd, setSolUsd] = useState<number>(0);
-  const [valueWindow, setValueWindow] = useState<"24h" | "7d" | "30d">("24h");
+  const [valueWindow, setValueWindow] = useState<"24h" | "7d" | "30d" | "90d">("24h");
   const [telegram, setTelegram] = useState<{ configured: boolean; chatId?: string; reportEnabled: boolean; reportTime: string | null } | null>(null);
   const [telegramToken, setTelegramToken] = useState("");
   const [telegramChatId, setTelegramChatId] = useState("");

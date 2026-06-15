@@ -3,7 +3,7 @@ import type { ChartOptions, ChartData } from "chart.js";
 import type { ValuePoint } from "../types.ts";
 import { Card, CardLabel } from "../lib.tsx";
 
-type Win = "24h" | "7d" | "30d";
+type Win = "24h" | "7d" | "30d" | "90d";
 
 export function PortfolioChartCard({
   valueHistory,
@@ -18,17 +18,17 @@ export function PortfolioChartCard({
 }) {
   const lineData: ChartData<"line"> | null = (() => {
     if (!valueHistory.length) return null;
-    const windowMs = valueWindow === "30d" ? 30 * 864e5 : valueWindow === "7d" ? 7 * 864e5 : 864e5;
+    const windowMs = valueWindow === "90d" ? 90 * 864e5 : valueWindow === "30d" ? 30 * 864e5 : valueWindow === "7d" ? 7 * 864e5 : 864e5;
     const cutoff = Date.now() - windowMs;
     const filtered = valueHistory.filter((p) => p.ts >= cutoff);
     if (!filtered.length) return null;
 
-    const step = valueWindow === "30d" ? 20 : valueWindow === "7d" ? 5 : 1;
+    const step = valueWindow === "90d" ? 60 : valueWindow === "30d" ? 20 : valueWindow === "7d" ? 5 : 1;
     const points = step === 1 ? filtered : filtered.filter((_, i) => i % step === 0 || i === filtered.length - 1);
 
     const labels = points.map((p) => {
       const d = new Date(p.ts);
-      if (valueWindow === "30d") return d.toLocaleDateString([], { month: "short", day: "numeric" });
+      if (valueWindow === "90d" || valueWindow === "30d") return d.toLocaleDateString([], { month: "short", day: "numeric" });
       if (valueWindow === "7d") return d.toLocaleDateString([], { weekday: "short", hour: "2-digit", minute: "2-digit" });
       return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
     });
@@ -99,7 +99,7 @@ export function PortfolioChartCard({
         <div className="flex items-center gap-3">
           <CardLabel>PORTFOLIO VALUE</CardLabel>
           <div className="flex items-center gap-1">
-            {(["24h", "7d", "30d"] as const).map((w) => (
+            {(["24h", "7d", "30d", "90d"] as const).map((w) => (
               <button
                 key={w}
                 onClick={() => setValueWindow(w)}
