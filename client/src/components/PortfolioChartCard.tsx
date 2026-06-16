@@ -1,21 +1,46 @@
 import { Line } from "react-chartjs-2";
-import type { ChartOptions, ChartData } from "chart.js";
-import type { ValuePoint } from "../types.ts";
+import type { ChartOptions, ChartData, Plugin } from "chart.js";
+import type { ValuePoint, TradeRecord } from "../types.ts";
 import { Card, CardLabel } from "../lib.tsx";
 
 type Win = "24h" | "7d" | "30d" | "90d";
+
+// Confirmed swaps from one rebalance run land within a few seconds of each
+// other. Collapse trades into events by clustering on a time gap so each run
+// draws a single marker instead of one per token swap.
+const CLUSTER_GAP_MS = 2 * 60_000;
+
+function rebalanceEvents(trades: TradeRecord[]): number[] {
+  const ts = trades
+    .filter((t) => t.status === "confirmed")
+    .map((t) => t.timestamp)
+    .sort((a, b) => a - b);
+  const events: number[] = [];
+  for (const t of ts) {
+    if (!events.length || t - events[events.length - 1] > CLUSTER_GAP_MS) {
+      events.push(t);
+    }
+  }
+  return events;
+}
 
 export function PortfolioChartCard({
   valueHistory,
   valueWindow,
   setValueWindow,
   solUsd,
+  trades,
 }: {
   valueHistory: ValuePoint[];
   valueWindow: Win;
   setValueWindow: (w: Win) => void;
   solUsd: number;
+  trades: TradeRecord[];
 }) {
+  // Fractional category indices (one per in-window rebalance event) for the
+  // marker plugin. Filled alongside lineData so the two stay in sync.
+  const markerIdx: number[] = [];
+
   const lineData: ChartData<"line"> | null = (() => {
     if (!valueHistory.length) return null;
     const windowMs = valueWindow === "90d" ? 90 * 864e5 : valueWindow === "30d" ? 30 * 864e5 : valueWindow === "7d" ? 7 * 864e5 : 864e5;
@@ -25,6 +50,21 @@ export function PortfolioChartCard({
 
     const step = valueWindow === "90d" ? 60 : valueWindow === "30d" ? 20 : valueWindow === "7d" ? 5 : 1;
     const points = step === 1 ? filtered : filtered.filter((_, i) => i % step === 0 || i === filtered.length - 1);
+
+    // Map each rebalance event onto a fractional position across the plotted
+    // points (evenly spaced on the category axis): find the surrounding samples
+    // by timestamp and interpolate the index.
+    const n = points.length;
+    if (n > 1) {
+      for (const ev of rebalanceEvents(trades)) {
+        if (ev < points[0].ts || ev > points[n - 1].ts) continue;
+        let i = 0;
+        while (i < n - 1 && points[i + 1].ts <= ev) i++;
+        if (i >= n - 1) { markerIdx.push(n - 1); continue; }
+        const span = points[i + 1].ts - points[i].ts;
+        markerIdx.push(span > 0 ? i + (ev - points[i].ts) / span : i);
+      }
+    }
 
     const labels = points.map((p) => {
       const d = new Date(p.ts);
@@ -63,6 +103,34 @@ export function PortfolioChartCard({
       ],
     };
   })();
+
+  // Draws a faint vertical line at each rebalance event. Sits behind the line
+  // (beforeDatasetsDraw) so the value curve stays on top.
+  const rebalanceMarkers: Plugin<"line"> = {
+    id: "rebalanceMarkers",
+    beforeDatasetsDraw(chart) {
+      if (!markerIdx.length) return;
+      const { ctx, chartArea, scales } = chart;
+      const xScale = scales.x;
+      if (!xScale || !chartArea) return;
+      ctx.save();
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = "rgba(34,211,238,0.32)";
+      ctx.setLineDash([3, 3]);
+      for (const fi of markerIdx) {
+        const lo = Math.floor(fi);
+        const frac = fi - lo;
+        const xLo = xScale.getPixelForValue(lo);
+        const xHi = xScale.getPixelForValue(Math.min(lo + 1, xScale.max ?? lo));
+        const x = xLo + (xHi - xLo) * frac;
+        ctx.beginPath();
+        ctx.moveTo(x, chartArea.top);
+        ctx.lineTo(x, chartArea.bottom);
+        ctx.stroke();
+      }
+      ctx.restore();
+    },
+  };
 
   const lineOptions: ChartOptions<"line"> = {
     responsive: true,
@@ -112,13 +180,20 @@ export function PortfolioChartCard({
             ))}
           </div>
         </div>
-        {solUsd > 0 && (
-          <span className="text-[11px] text-muted">SOL = <span className="text-ink">${solUsd.toFixed(2)}</span></span>
-        )}
+        <div className="flex items-center gap-3">
+          {markerIdx.length > 0 && (
+            <span className="flex items-center gap-1 text-[10px] text-dim">
+              <span className="inline-block w-2.5 border-t border-dashed border-cyan/60" /> rebalance
+            </span>
+          )}
+          {solUsd > 0 && (
+            <span className="text-[11px] text-muted">SOL = <span className="text-ink">${solUsd.toFixed(2)}</span></span>
+          )}
+        </div>
       </div>
       {lineData ? (
         <div className="flex-1 min-h-0" style={{ minHeight: 180 }}>
-          <Line data={lineData} options={lineOptions} />
+          <Line data={lineData} options={lineOptions} plugins={[rebalanceMarkers]} />
         </div>
       ) : (
         <div className="flex items-center justify-center text-dim text-xs" style={{ minHeight: 180 }}>

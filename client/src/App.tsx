@@ -648,6 +648,7 @@ function Dashboard() {
             valueWindow={valueWindow}
             setValueWindow={setValueWindow}
             solUsd={solUsd}
+            trades={state?.trades ?? []}
           />
 
           {/* Tabbed panel */}

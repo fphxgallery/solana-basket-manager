@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.1.7-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.1.8-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -124,6 +124,9 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.1.8
+- Portfolio Value chart now marks each rebalance with a dashed cyan vertical line; confirmed swaps from one run are clustered into a single event, and markers track the active 24H/7D/30D/90D window
 
 ### v3.1.7
 - Holdings table now shows each token's real logo (fetched from Jupiter by mint) with a cyan duotone overlay to match the theme; falls back to a monogram when no logo is found
