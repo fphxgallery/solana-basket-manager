@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import type { BasketState } from "../types.ts";
 import { formatSol, truncate, formatTime } from "../lib.tsx";
+import { TokenIcon } from "./TokenIcon.tsx";
 
 export function HoldingsTable({
   basket,
@@ -79,28 +80,33 @@ export function HoldingsTable({
                     return (
                       <tr key={token.mint} className="hover:bg-white/[0.02]">
                         <td className="py-2 pr-3">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-medium text-ink">{token.symbol}</span>
-                            {isDyn && (
-                              <span className="px-1 py-px rounded text-[8.5px] leading-none text-cyan bg-cyan-bg border border-cyan-line">DYNAMIC</span>
-                            )}
-                            {isReserve && (
-                              <span className="px-1 py-px rounded text-[8.5px] leading-none text-warn bg-[#2a2208] border border-[#5a4a12]">RESERVE</span>
-                            )}
-                          </div>
-                          <div className="text-dim">{truncate(token.mint, 4)}</div>
-                          {/* allocation mini-bar: fill = current, tick = target, amber tick = reserve floor */}
-                          <div className="relative mt-1 h-1 rounded-full bg-[#0e1c28] overflow-hidden" style={{ width: 96 }}>
-                            <div
-                              className="absolute inset-y-0 left-0 rounded-full"
-                              style={{ width: `${(cur / maxW) * 100}%`, background: isDyn ? "var(--cyan)" : inBand ? "var(--good)" : "var(--warn)" }}
-                            />
-                            {/* target tick */}
-                            <div className="absolute inset-y-0 w-px bg-ink/60" style={{ left: `${(tgt / maxW) * 100}%` }} />
-                            {/* reserve floor marker */}
-                            {isReserve && floorPct > 0 && (
-                              <div className="absolute inset-y-0 w-px bg-warn" style={{ left: `${(floorPct / maxW) * 100}%` }} />
-                            )}
+                          <div className="flex items-center gap-2">
+                            <TokenIcon mint={token.mint} symbol={token.symbol} />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-ink">{token.symbol}</span>
+                                {isDyn && (
+                                  <span className="px-1 py-px rounded text-[8.5px] leading-none text-cyan bg-cyan-bg border border-cyan-line">DYNAMIC</span>
+                                )}
+                                {isReserve && (
+                                  <span className="px-1 py-px rounded text-[8.5px] leading-none text-warn bg-[#2a2208] border border-[#5a4a12]">RESERVE</span>
+                                )}
+                              </div>
+                              <div className="text-dim">{truncate(token.mint, 4)}</div>
+                              {/* allocation mini-bar: fill = current, tick = target, amber tick = reserve floor */}
+                              <div className="relative mt-1 h-1 rounded-full bg-[#0e1c28] overflow-hidden" style={{ width: 96 }}>
+                                <div
+                                  className="absolute inset-y-0 left-0 rounded-full"
+                                  style={{ width: `${(cur / maxW) * 100}%`, background: isDyn ? "var(--cyan)" : inBand ? "var(--good)" : "var(--warn)" }}
+                                />
+                                {/* target tick */}
+                                <div className="absolute inset-y-0 w-px bg-ink/60" style={{ left: `${(tgt / maxW) * 100}%` }} />
+                                {/* reserve floor marker */}
+                                {isReserve && floorPct > 0 && (
+                                  <div className="absolute inset-y-0 w-px bg-warn" style={{ left: `${(floorPct / maxW) * 100}%` }} />
+                                )}
+                              </div>
+                            </div>
                           </div>
                         </td>
                         <td className="text-right py-2 text-muted tabular-nums">{h ? h.balance.toFixed(4) : "—"}</td>
