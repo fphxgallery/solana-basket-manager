@@ -9,6 +9,7 @@ export interface TradeRecord {
   status: "pending" | "confirmed" | "failed";
   inputSol: number;
   outputSol: number;
+  costBps?: number; // execution cost = Jupiter quote price impact, in bps (absent on older records)
 }
 
 export interface BotState {

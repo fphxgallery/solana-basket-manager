@@ -454,6 +454,7 @@ async function performSwap(
     status: "pending" as const,
     inputSol: swap.displaySol,
     outputSol: 0,
+    costBps: 0,
   };
 
   if (swap.rawAmount < 1_000n) return null; // skip dust — before addTrade to avoid phantom pending entries
@@ -553,6 +554,8 @@ async function performSwap(
       t.bundleId = sig;
       t.outputSol = outAmountSol;
       t.dexLabels = [quote.routePlan?.[0]?.swapInfo?.label ?? "Jupiter"];
+      // Execution cost = route price impact (fraction string, e.g. "0.0042") → bps
+      t.costBps = Math.max(0, Math.round((Number(quote.priceImpactPct) || 0) * 10000));
     }
 
     // Wait for on-chain confirmation before marking status

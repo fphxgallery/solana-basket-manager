@@ -33,6 +33,7 @@ export interface TradeRecord {
   status: "pending" | "confirmed" | "failed";
   inputSol: number;
   outputSol: number;
+  costBps: number;      // execution cost = Jupiter quote price impact, in bps (0 = unknown)
 }
 
 export interface BotState {

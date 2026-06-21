@@ -11,10 +11,18 @@ if (!apiToken || apiToken.length < 16) {
 const WSOL  = "So11111111111111111111111111111111111111112";
 const USDC  = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v";
 
+// Strip a trailing inline `# comment` (whitespace-then-#) and surrounding
+// whitespace. Some dotenv setups don't strip inline comments, so a line like
+// `FOO=true  # note` would otherwise reach the parsers verbatim and crash boot.
+function cleanEnv(raw: string): string {
+  return raw.split(/\s+#/)[0].trim();
+}
+
 function envInt(key: string, fallback: number): number {
   const raw = process.env[key];
   if (!raw) return fallback;
-  const n = parseInt(raw, 10);
+  const cleaned = cleanEnv(raw);
+  const n = parseInt(cleaned, 10);
   if (isNaN(n)) throw new Error(`${key} must be an integer, got: "${raw}"`);
   return n;
 }
@@ -22,7 +30,7 @@ function envInt(key: string, fallback: number): number {
 function envBool(key: string, fallback: boolean): boolean {
   const raw = process.env[key];
   if (raw == null || raw === "") return fallback;
-  const v = raw.trim().toLowerCase();
+  const v = cleanEnv(raw).toLowerCase();
   if (["1", "true", "yes", "on"].includes(v)) return true;
   if (["0", "false", "no", "off"].includes(v)) return false;
   throw new Error(`${key} must be a boolean (true/false), got: "${raw}"`);

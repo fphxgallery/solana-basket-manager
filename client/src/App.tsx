@@ -743,17 +743,27 @@ function Dashboard() {
                               </div>
                               <span className="text-[10px] text-dim">{formatTime(t.timestamp)}</span>
                             </div>
-                            {(t.inputSol > 0 || (t.status === "confirmed" && t.profitSol !== 0)) && (
+                            {(t.inputSol > 0 || (t.costBps ?? 0) > 0 || (t.status === "confirmed" && t.profitSol !== 0)) && (
                               <div className="flex items-center justify-between text-[10px]">
                                 <span className="text-dim">
                                   {t.inputSol > 0 ? `${t.inputSol.toFixed(4)} SOL value swapped` : ""}
                                 </span>
-                                {t.status === "confirmed" && t.profitSol !== 0 && (
-                                  <span className={`tabular-nums ${t.profitSol > 0 ? "text-good" : "text-bad"}`}>
-                                    {t.profitSol > 0 ? "+" : ""}{t.profitSol.toFixed(4)} SOL
-                                    {t.profitBps ? ` · ${t.profitBps > 0 ? "+" : ""}${t.profitBps} bps` : ""}
-                                  </span>
-                                )}
+                                <div className="flex items-center gap-2 tabular-nums">
+                                  {t.status === "confirmed" && t.profitSol !== 0 && (
+                                    <span className={t.profitSol > 0 ? "text-good" : "text-bad"}>
+                                      {t.profitSol > 0 ? "+" : ""}{t.profitSol.toFixed(4)} SOL
+                                      {t.profitBps ? ` · ${t.profitBps > 0 ? "+" : ""}${t.profitBps} bps` : ""}
+                                    </span>
+                                  )}
+                                  {(t.costBps ?? 0) > 0 && (
+                                    <span
+                                      className={(t.costBps ?? 0) >= 100 ? "text-warn" : "text-dim"}
+                                      title="Execution cost — Jupiter route price impact"
+                                    >
+                                      {((t.costBps ?? 0) / 100).toFixed(2)}% cost
+                                    </span>
+                                  )}
+                                </div>
                               </div>
                             )}
                           </div>
