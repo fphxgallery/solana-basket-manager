@@ -3,7 +3,7 @@ import { CONFIG } from "./config.js";
 import { loadKeypair } from "./wallet.js";
 import { store } from "./store.js";
 import { basketStore } from "./basket-store.js";
-import { refreshHoldings, needsRebalance, executeRebalance } from "./basket.js";
+import { refreshHoldings, needsRebalance, executeRebalance, reconcileLending } from "./basket.js";
 import { recordSnapshot } from "./value-history.js";
 import { notify, getReportSchedule, sendDailyReport } from "./telegram.js";
 
@@ -37,6 +37,11 @@ async function refreshBasket() {
     // basketStore.on("holdings") in api.ts handles the SSE broadcast via basketSnapshot()
     // Record value snapshot for 24h chart (fire-and-forget)
     recordSnapshot(basketStore.totalValueSol).catch(() => {});
+    // Park excess idle USDC into Jupiter Lend — skip while a rebalance is mid-flight
+    // so we don't strand funds a swap is about to spend (it withdraws on demand anyway).
+    if (!rebalancing) {
+      await reconcileLending(connection, keypair).catch((e) => console.error("[bot] lend reconcile failed:", e));
+    }
   } catch (e) {
     console.error("[bot] basket refresh failed:", e);
   }

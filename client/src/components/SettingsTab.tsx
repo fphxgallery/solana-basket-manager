@@ -1,4 +1,4 @@
-import { KeyRound, Download, Plus, AlertTriangle, Send, Check, RefreshCw, X, Clock, SlidersHorizontal } from "lucide-react";
+import { KeyRound, Download, Plus, AlertTriangle, Send, Check, RefreshCw, X, Clock, SlidersHorizontal, Landmark } from "lucide-react";
 import type { BasketState } from "../types.ts";
 import { truncate, CopyButton } from "../lib.tsx";
 
@@ -13,7 +13,7 @@ export interface SettingsTabProps {
   onCreate: () => void;
   // basket settings
   basket: BasketState | null;
-  onSaveSettings: (patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; minSwapUsd?: number }) => void;
+  onSaveSettings: (patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; minSwapUsd?: number; lendEnabled?: boolean; lendBufferPct?: number; lendMinDepositUsd?: number }) => void;
   // telegram
   telegram: TelegramInfo | null;
   telegramToken: string;
@@ -107,6 +107,45 @@ export function SettingsTab(p: SettingsTabProps) {
                 className={input} />
             </label>
           </div>
+        </Panel>
+
+        <Panel icon={Landmark} title="LENDING (JUPITER LEND)">
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <span className="text-[11px] text-ink block">Park idle USDC for yield</span>
+              <span className="text-[10px] text-dim">Deposits the lend sleeve above the buffer; withdraws on demand to rebalance.</span>
+            </div>
+            <button
+              onClick={() => p.onSaveSettings({ lendEnabled: !(p.basket?.config.lendEnabled ?? false) })}
+              role="switch" aria-checked={!!p.basket?.config.lendEnabled} aria-label="Jupiter Lend"
+              className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${p.basket?.config.lendEnabled ? "bg-cyan" : "bg-[#1a2a36]"}`}
+            >
+              <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${p.basket?.config.lendEnabled ? "left-[18px]" : "left-0.5"}`} />
+            </button>
+          </div>
+          {p.basket?.config.lendEnabled && (
+            <div className="space-y-3">
+              <label className="block">
+                <span className="text-[11px] text-dim block mb-1">Liquid buffer (% of portfolio)</span>
+                <input type="number" min="0" max="100" step="0.5"
+                  defaultValue={p.basket?.config.lendBufferPct ?? 4}
+                  onBlur={(e) => p.onSaveSettings({ lendBufferPct: parseFloat(e.target.value) })}
+                  className={input} />
+              </label>
+              <label className="block">
+                <span className="text-[11px] text-dim block mb-1">Min deposit ($)</span>
+                <input type="number" min="0" max="1000" step="1"
+                  defaultValue={p.basket?.config.lendMinDepositUsd ?? 10}
+                  onBlur={(e) => p.onSaveSettings({ lendMinDepositUsd: parseFloat(e.target.value) })}
+                  className={input} />
+              </label>
+              {(p.basket?.lentValueUsd ?? 0) > 0 && (
+                <div className="text-[11px] text-cyan/80">
+                  Currently lent: <span className="tabular-nums">${(p.basket?.lentValueUsd ?? 0).toFixed(2)}</span> · {(p.basket?.lendApy ?? 0).toFixed(2)}% APY
+                </div>
+              )}
+            </div>
+          )}
         </Panel>
       </div>
 

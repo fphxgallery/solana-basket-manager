@@ -117,7 +117,7 @@ async function notifyRich(message: string): Promise<void> {
 export async function sendDailyReport(): Promise<void> {
   if (!config?.token || !config?.chatId) return;
 
-  const { holdings, totalValueSol, totalValueUsd, baselineTimestamp, pnlUsd, pnlPctUsd, hwmValueUsd, hwmCapturedAt } = basketStore;
+  const { holdings, totalValueSol, totalValueUsd, baselineTimestamp, pnlUsd, pnlPctUsd, hwmValueUsd, hwmCapturedAt, lentValueUsd, lendApy } = basketStore;
   const basketConfig = basketStore.config;
   const solUsd = await getSolUsd();
   const walletSol = store.walletBalanceSol;
@@ -163,6 +163,10 @@ export async function sendDailyReport(): Promise<void> {
     let line = `🏦 <b>${walletSol.toFixed(4)} SOL</b>`;
     if (solUsd > 0) line += ` <i>($${(walletSol * solUsd).toFixed(2)})</i>`;
     msg += `<p>${line}</p>`;
+  }
+
+  if (basketConfig.lendEnabled && lentValueUsd > 0) {
+    msg += `<p>🏦 <b>Lent $${lentValueUsd.toFixed(2)}</b> <i>· ${lendApy.toFixed(2)}% APY</i></p>`;
   }
 
   if (holdings.length > 0) {

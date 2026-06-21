@@ -38,6 +38,10 @@ function basketSnapshot() {
     pnlPctUsd: basketStore.pnlPctUsd,
     hwmValueUsd: basketStore.hwmValueUsd,
     hwmCapturedAt: basketStore.hwmCapturedAt,
+    lentValueSol: basketStore.lentValueSol,
+    lentValueUsd: basketStore.lentValueUsd,
+    lentBalanceUi: basketStore.lentBalanceUi,
+    lendApy: basketStore.lendApy,
   };
 }
 
@@ -128,7 +132,7 @@ router.put("/basket/tokens", (req: Request, res: Response) => {
 
 // Update basket settings (drift threshold, rebalance interval)
 router.patch("/basket/settings", (req: Request, res: Response) => {
-  const { driftThresholdPct, rebalanceIntervalHours, hwmEnabled, hwmHalfLifeDays, curvePoints, curveCap, minSwapUsd, dynamicWeightMint, reserveMint, reserveFloorPct } = req.body as {
+  const { driftThresholdPct, rebalanceIntervalHours, hwmEnabled, hwmHalfLifeDays, curvePoints, curveCap, minSwapUsd, dynamicWeightMint, reserveMint, reserveFloorPct, lendEnabled, lendMint, lendBufferPct, lendMinDepositUsd } = req.body as {
     driftThresholdPct?: number;
     rebalanceIntervalHours?: number;
     hwmEnabled?: boolean;
@@ -139,6 +143,10 @@ router.patch("/basket/settings", (req: Request, res: Response) => {
     dynamicWeightMint?: string;
     reserveMint?: string | null;
     reserveFloorPct?: number;
+    lendEnabled?: boolean;
+    lendMint?: string;
+    lendBufferPct?: number;
+    lendMinDepositUsd?: number;
   };
   const patch: Parameters<typeof basketStore.updateSettings>[0] = {};
   if (driftThresholdPct != null) {
@@ -232,6 +240,38 @@ router.patch("/basket/settings", (req: Request, res: Response) => {
       return;
     }
     patch.reserveFloorPct = reserveFloorPct;
+  }
+  if (lendEnabled != null) {
+    if (typeof lendEnabled !== "boolean") {
+      res.status(400).json({ error: "lendEnabled must be a boolean" });
+      return;
+    }
+    patch.lendEnabled = lendEnabled;
+  }
+  if (lendMint != null) {
+    if (typeof lendMint !== "string" || !lendMint.trim()) {
+      res.status(400).json({ error: "lendMint must be a non-empty string" });
+      return;
+    }
+    try { new PublicKey(lendMint); } catch {
+      res.status(400).json({ error: "lendMint: invalid mint address" });
+      return;
+    }
+    patch.lendMint = lendMint;
+  }
+  if (lendBufferPct != null) {
+    if (typeof lendBufferPct !== "number" || lendBufferPct < 0 || lendBufferPct > 100) {
+      res.status(400).json({ error: "lendBufferPct must be a number in [0, 100]" });
+      return;
+    }
+    patch.lendBufferPct = lendBufferPct;
+  }
+  if (lendMinDepositUsd != null) {
+    if (typeof lendMinDepositUsd !== "number" || lendMinDepositUsd < 0) {
+      res.status(400).json({ error: "lendMinDepositUsd must be a non-negative number" });
+      return;
+    }
+    patch.lendMinDepositUsd = lendMinDepositUsd;
   }
   basketStore.updateSettings(patch);
   res.json(basketStore.config);

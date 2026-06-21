@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.2.0-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.3.0-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -124,6 +124,13 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.3.0
+- **Jupiter Lend** integration — park idle USDC (the dynamic-weight/reserve sleeve) into Jupiter Lend Earn to accrue yield instead of sitting flat. Disabled by default; flip it on in Settings → Lending
+- Keeps a configurable **liquid buffer** (% of total portfolio) in-wallet and deposits the rest; withdraws on demand to fund a rebalance, and **skips the swap rather than stalling** if a withdraw can't be served
+- Lent balance is folded back into holdings before drift/weight math, so parking never makes the bot think USDC is underweight
+- Holdings row and Settings show the live lent amount + APY; daily Telegram report adds a lending line; deposits and withdraw-failures send alerts
+- New settings: `lendEnabled`, `lendMint`, `lendBufferPct`, `lendMinDepositUsd` (runtime, live-tunable)
 
 ### v3.2.0
 - Rebalance log now shows a per-swap **execution cost** (Jupiter route price impact, in %) — dim normally, amber at ≥1% so expensive fills into thin pools stand out. Stored on each trade as `costBps`

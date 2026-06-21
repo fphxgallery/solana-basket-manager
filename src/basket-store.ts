@@ -20,6 +20,11 @@ export interface BasketConfig {
   dynamicWeightMint: string;      // token that gets the dynamic profit-taking weight (default USDC)
   reserveMint: string | null;     // token with a hard floor weight; null = disabled
   reserveFloorPct: number;        // minimum weight % enforced for reserveMint
+  // ── Jupiter Lend (idle-USDC yield) ──
+  lendEnabled: boolean;           // master switch; false ships a no-op
+  lendMint: string;               // underlying token to park (default USDC, usually == dynamicWeightMint)
+  lendBufferPct: number;          // keep this % of TOTAL PORTFOLIO value liquid in-wallet; park the rest of lendMint
+  lendMinDepositUsd: number;      // don't deposit/withdraw smaller than this (gas floor)
 }
 
 export interface TokenHolding {
@@ -50,6 +55,10 @@ const DEFAULTS: BasketConfig = {
   dynamicWeightMint: USDC_MINT,
   reserveMint: null,
   reserveFloorPct: 0,
+  lendEnabled: false,
+  lendMint: USDC_MINT,
+  lendBufferPct: 4,
+  lendMinDepositUsd: 10,
 };
 
 class BasketStore extends EventEmitter {
@@ -67,6 +76,11 @@ class BasketStore extends EventEmitter {
   /** High-water mark for dynamic USDC weight profit lock. */
   hwmValueUsd: number | null = null;
   hwmCapturedAt: number | null = null;
+  /** Jupiter Lend — transient, recomputed each refresh (not persisted). */
+  lentValueSol = 0;
+  lentValueUsd = 0;
+  lentBalanceUi = 0;  // lent amount in whole lendMint tokens
+  lendApy = 0;        // current vault APY, percent
 
   get pnlSol(): number | null {
     if (this.baselineValueSol == null || this.totalValueSol === 0) return null;
@@ -184,6 +198,14 @@ class BasketStore extends EventEmitter {
     this.hwmCapturedAt = this.hwmValueUsd != null ? Date.now() : null;
     this._save();
     this.emit("changed"); // push updated pnl (now 0%) to SSE clients immediately
+  }
+
+  setLendState(s: { lentValueSol: number; lentValueUsd: number; lentBalanceUi: number; lendApy: number }) {
+    this.lentValueSol = s.lentValueSol;
+    this.lentValueUsd = s.lentValueUsd;
+    this.lentBalanceUi = s.lentBalanceUi;
+    this.lendApy = s.lendApy;
+    // No _save / emit — setHoldings runs right after in the same refresh and broadcasts.
   }
 
   updateHwm(valueUsd: number) {

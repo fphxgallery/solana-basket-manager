@@ -55,6 +55,8 @@ export const CONFIG = {
   // Basket pricing + rebalance swaps use the Jupiter lite API
   JUPITER_LITE_QUOTE_URL: "https://lite-api.jup.ag/swap/v1/quote",
   JUPITER_LITE_SWAP_URL: "https://lite-api.jup.ag/swap/v1/swap",
+  // Jupiter Lend Earn (idle-USDC yield) — lite host, no API key like the swap API
+  JUPITER_LEND_BASE_URL: "https://lite-api.jup.ag/lend/v1/earn",
   // Rebalance slippage. When dynamic slippage is on (default), Jupiter estimates
   // the optimal slippage per route and this acts as the hard CAP; when off, it's
   // the fixed slippage. Not latency-sensitive — just needs to fill.

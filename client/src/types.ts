@@ -48,6 +48,10 @@ export interface BasketState {
     dynamicWeightMint: string;
     reserveMint: string | null;
     reserveFloorPct: number;
+    lendEnabled: boolean;
+    lendMint: string;
+    lendBufferPct: number;
+    lendMinDepositUsd: number;
   };
   holdings: TokenHolding[];
   totalValueSol: number;
@@ -62,6 +66,10 @@ export interface BasketState {
   pnlPctUsd: number | null;
   hwmValueUsd: number | null;
   hwmCapturedAt: number | null;
+  lentValueSol: number;
+  lentValueUsd: number;
+  lentBalanceUi: number;
+  lendApy: number;
 }
 
 export interface ValuePoint {

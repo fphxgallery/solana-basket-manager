@@ -15,6 +15,10 @@ export function HoldingsTable({
   const dynMint = basket?.config.dynamicWeightMint;
   const reserveMint = basket?.config.reserveMint;
   const floorPct = basket?.config.reserveFloorPct ?? 0;
+  const lendMint = basket?.config.lendMint;
+  const lendEnabled = !!basket?.config.lendEnabled;
+  const lentValueUsd = basket?.lentValueUsd ?? 0;
+  const lendApy = basket?.lendApy ?? 0;
   const totalWeight = tokens.reduce((s, t) => s + t.targetWeight, 0);
 
   // shared bar scale so per-token allocation bars are comparable
@@ -77,6 +81,7 @@ export function HoldingsTable({
                     const isZero = Math.abs(drift) < 0.05;
                     const isDyn = !!dynMint && token.mint === dynMint;
                     const isReserve = !!reserveMint && token.mint === reserveMint;
+                    const isLend = lendEnabled && !!lendMint && token.mint === lendMint && lentValueUsd > 0;
                     return (
                       <tr key={token.mint} className="hover:bg-white/[0.02]">
                         <td className="py-2 pr-3">
@@ -93,6 +98,11 @@ export function HoldingsTable({
                                 )}
                               </div>
                               <div className="text-dim">{truncate(token.mint, 4)}</div>
+                              {isLend && (
+                                <div className="text-cyan/80 text-[10px] mt-0.5">
+                                  ${lentValueUsd.toFixed(2)} in Jupiter Lend · {lendApy.toFixed(2)}% APY
+                                </div>
+                              )}
                               {/* allocation mini-bar: fill = current, tick = target, amber tick = reserve floor */}
                               <div className="relative mt-1 h-1 rounded-full bg-[#0e1c28] overflow-hidden" style={{ width: 96 }}>
                                 <div

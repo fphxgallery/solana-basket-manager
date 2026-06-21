@@ -5,6 +5,7 @@ import { basketStore, type TokenHolding } from "./basket-store.js";
 import { store } from "./store.js";
 import { getSolUsd } from "./value-history.js";
 import { notify } from "./telegram.js";
+import { jupiterLend } from "./lending.js";
 import type { JupiterQuote } from "./types.js";
 
 const WSOL = CONFIG.WSOL_MINT;
@@ -189,6 +190,34 @@ export async function refreshHoldings(
   // Update wallet balance from the SOL balance already fetched — avoids a redundant getBalance call
   if (balances[WSOL]) store.setWalletBalance(balances[WSOL].uiAmount);
 
+  // ── Jupiter Lend accounting fix ──
+  // USDC parked in Jupiter Lend has left the wallet, so fetchBalances under-counts it.
+  // Fold the lent balance back into the lendMint holding BEFORE pricing/weights, or
+  // the bot would see lendMint underweight and buy more — fighting its own parking.
+  const { lendEnabled, lendMint } = basketStore.config;
+  let lentUi = 0;
+  let lendApy = 0;
+  if (lendEnabled && mints.includes(lendMint)) {
+    try {
+      const [pos, info] = await Promise.all([
+        jupiterLend.getPosition(walletPk, lendMint),
+        jupiterLend.getTokenInfo(lendMint),
+      ]);
+      lendApy = info?.apyPct ?? 0;
+      if (pos.underlyingRaw > 0n) {
+        lentUi = Number(pos.underlyingRaw) / 10 ** pos.decimals;
+        const wb = balances[lendMint] ?? { uiAmount: 0, rawAmount: "0" };
+        balances[lendMint] = {
+          uiAmount: wb.uiAmount + lentUi,
+          rawAmount: (BigInt(wb.rawAmount) + pos.underlyingRaw).toString(),
+        };
+      }
+    } catch (e) {
+      // Lend read failure must not break the whole refresh — treat as zero lent this cycle.
+      console.error("[lending] position read failed:", e instanceof Error ? e.message : e);
+    }
+  }
+
   // Derive SOL value sequentially (not parallel) to avoid 429 rate limits.
   // Falls back to cached price if the quote fails.
   const holdingsRaw: Array<typeof tokens[0] & { balance: number; rawAmount: string; priceSol: number; valueSol: number }> = [];
@@ -301,7 +330,102 @@ export async function refreshHoldings(
     basketStore.patchBaselineUsd(basketStore.baselineValueSol * (totalValueUsd / totalValueSol));
   }
 
+  // Stash the lent slice for the UI (value it at the lendMint's derived price).
+  const lendPriceSol = holdingsRaw.find((h) => h.mint === lendMint)?.priceSol ?? 0;
+  const lentValueSol = lentUi * lendPriceSol;
+  basketStore.setLendState({
+    lentValueSol,
+    lentValueUsd: solUsd > 0 ? lentValueSol * solUsd : 0,
+    lentBalanceUi: lentUi,
+    lendApy,
+  });
+
   basketStore.setHoldings(holdings, totalValueSol, totalValueUsd);
+}
+
+// ── Jupiter Lend liquidity management ──────────────────────────────────────────
+
+/** On-chain wallet balance of a single mint in base units (excludes lent). */
+async function walletRawBalance(connection: Connection, owner: PublicKey, mint: string): Promise<bigint> {
+  try {
+    const { value } = await connection.getParsedTokenAccountsByOwner(owner, { mint: new PublicKey(mint) });
+    let total = 0n;
+    for (const { account } of value) {
+      const amt = account.data.parsed?.info?.tokenAmount?.amount as string | undefined;
+      if (amt) total += BigInt(amt);
+    }
+    return total;
+  } catch {
+    return 0n;
+  }
+}
+
+/**
+ * Ensure the wallet holds at least neededRaw of a sell's input mint, withdrawing the
+ * shortfall from Jupiter Lend when the mint is the lend sleeve. Returns false only when
+ * a required withdraw FAILS — caller must then skip that swap (never stall the rebalance).
+ * Non-lend mints and disabled lending always return true.
+ */
+async function ensureLendLiquidity(
+  connection: Connection,
+  keypair: Keypair,
+  mint: string,
+  neededRaw: bigint,
+): Promise<{ ok: boolean; withdrewUsd: number }> {
+  const { lendEnabled, lendMint } = basketStore.config;
+  if (!lendEnabled || mint !== lendMint) return { ok: true, withdrewUsd: 0 };
+
+  const walletRaw = await walletRawBalance(connection, keypair.publicKey, mint);
+  if (walletRaw >= neededRaw) return { ok: true, withdrewUsd: 0 };
+
+  const shortfall = neededRaw - walletRaw;
+  const info = await jupiterLend.getTokenInfo(mint).catch(() => null);
+  const shortfallUsd = info ? (Number(shortfall) / 10 ** info.decimals) * info.priceUsd : 0;
+  console.log(`[lending] sell needs ${shortfall} more ${mint.slice(0, 4)} than in wallet — withdrawing from Jupiter Lend`);
+
+  const res = await jupiterLend.withdraw(connection, keypair, mint, shortfall);
+  if (!res.ok) {
+    console.error(`[lending] withdraw failed: ${res.error}`);
+    const sym = basketStore.config.tokens.find((t) => t.mint === mint)?.symbol ?? mint.slice(0, 4);
+    notify(`⚠️ <b>Jupiter Lend withdraw failed</b>\nSkipped ${sym} → SOL sell, retry next cycle.`).catch(() => {});
+    return { ok: false, withdrewUsd: 0 };
+  }
+  return { ok: true, withdrewUsd: shortfallUsd };
+}
+
+/**
+ * Park excess idle lendMint into Jupiter Lend. Keeps lendBufferPct of total portfolio
+ * value liquid in-wallet; deposits the rest. Deposit-only — withdrawals happen on demand
+ * during a rebalance (ensureLendLiquidity). No-op unless lending is enabled.
+ */
+export async function reconcileLending(connection: Connection, keypair: Keypair): Promise<void> {
+  const { lendEnabled, lendMint, lendBufferPct, lendMinDepositUsd } = basketStore.config;
+  if (!lendEnabled) return;
+
+  const totalValueUsd = basketStore.totalValueUsd;
+  if (totalValueUsd <= 0) return;
+
+  const info = await jupiterLend.getTokenInfo(lendMint).catch(() => null);
+  if (!info || info.priceUsd <= 0) return; // no vault for this mint, or price unknown
+
+  const walletRaw = await walletRawBalance(connection, keypair.publicKey, lendMint);
+  const walletUsd = (Number(walletRaw) / 10 ** info.decimals) * info.priceUsd;
+
+  const bufferUsd = (totalValueUsd * lendBufferPct) / 100;
+  const parkableUsd = walletUsd - bufferUsd;
+  if (parkableUsd < lendMinDepositUsd) return; // sleeve below buffer, or dust — hold
+
+  const parkableTokens = parkableUsd / info.priceUsd;
+  const parkableRaw = BigInt(Math.floor(parkableTokens * 10 ** info.decimals));
+  if (parkableRaw <= 0n) return;
+
+  const res = await jupiterLend.deposit(connection, keypair, lendMint, parkableRaw);
+  if (res.ok) {
+    console.log(`[lending] deposited $${parkableUsd.toFixed(2)} to Jupiter Lend`);
+    notify(`🏦 <b>Jupiter Lend</b>\nParked $${parkableUsd.toFixed(2)} · ${info.apyPct.toFixed(2)}% APY`).catch(() => {});
+  } else {
+    console.error(`[lending] deposit failed: ${res.error}`);
+  }
 }
 
 // ── Rebalance ─────────────────────────────────────────────────────────────────
@@ -373,8 +497,14 @@ export async function executeRebalance(
   skipped += sellSwaps.length - filteredSells.length;
 
   const results: SwapResult[] = [];
+  let lendWithdrawnUsd = 0;
 
   for (const swap of filteredSells) {
+    // Selling the lend sleeve? Pull the shortfall out of Jupiter Lend first.
+    // A withdraw failure means skip this sell (never stall the rebalance).
+    const liq = await ensureLendLiquidity(connection, keypair, swap.inputMint, swap.rawAmount);
+    if (!liq.ok) continue;
+    lendWithdrawnUsd += liq.withdrewUsd;
     const result = await performSwap(connection, keypair, swap);
     if (result) results.push(result);
   }
@@ -424,6 +554,7 @@ export async function executeRebalance(
     const lines = results.map((r) =>
       `${r.status === "confirmed" ? "✅" : "❌"} ${r.label} — ${r.sol.toFixed(4)} SOL`,
     );
+    if (lendWithdrawnUsd > 0) lines.push(`• withdrew $${lendWithdrawnUsd.toFixed(2)} from Jupiter Lend`);
     notify(`${icon} <b>Rebalance complete</b>\n${lines.join("\n")}`).catch(() => {});
   }
 }
