@@ -19,6 +19,15 @@ function envInt(key: string, fallback: number): number {
   return n;
 }
 
+function envBool(key: string, fallback: boolean): boolean {
+  const raw = process.env[key];
+  if (raw == null || raw === "") return fallback;
+  const v = raw.trim().toLowerCase();
+  if (["1", "true", "yes", "on"].includes(v)) return true;
+  if (["0", "false", "no", "off"].includes(v)) return false;
+  throw new Error(`${key} must be a boolean (true/false), got: "${raw}"`);
+}
+
 export const CONFIG = {
   WSOL_MINT: WSOL,
   USDC_MINT: USDC,
@@ -38,8 +47,13 @@ export const CONFIG = {
   // Basket pricing + rebalance swaps use the Jupiter lite API
   JUPITER_LITE_QUOTE_URL: "https://lite-api.jup.ag/swap/v1/quote",
   JUPITER_LITE_SWAP_URL: "https://lite-api.jup.ag/swap/v1/swap",
-  // Higher slippage for rebalance swaps (not latency-sensitive, just needs to fill)
-  REBALANCE_SLIPPAGE_BPS: 300,
+  // Rebalance slippage. When dynamic slippage is on (default), Jupiter estimates
+  // the optimal slippage per route and this acts as the hard CAP; when off, it's
+  // the fixed slippage. Not latency-sensitive — just needs to fill.
+  REBALANCE_SLIPPAGE_BPS: envInt("REBALANCE_SLIPPAGE_BPS", 300),
+  // Let Jupiter pick per-swap slippage (tight on liquid routes, looser on thin
+  // ones) up to the cap above, instead of always using the fixed cap.
+  REBALANCE_DYNAMIC_SLIPPAGE: envBool("REBALANCE_DYNAMIC_SLIPPAGE", true),
 
   PORT: envInt("PORT", 3420),
 } as const;

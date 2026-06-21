@@ -490,12 +490,18 @@ async function performSwap(
       ? Number(BigInt(quote.outAmount)) / 1e9
       : swap.displaySol;
 
-    // Build swap tx via lite API (no key needed)
+    // Build swap tx via lite API (no key needed). With dynamic slippage on,
+    // Jupiter recomputes the optimal slippage per route (capped at
+    // REBALANCE_SLIPPAGE_BPS) and writes it onto the tx, overriding the quote's
+    // slippageBps; otherwise the fixed quote slippage stands.
     const swapBody = JSON.stringify({
       quoteResponse: quote,
       userPublicKey: keypair.publicKey.toBase58(),
       wrapAndUnwrapSol: true,
       dynamicComputeUnitLimit: true,
+      ...(CONFIG.REBALANCE_DYNAMIC_SLIPPAGE
+        ? { dynamicSlippage: { maxBps: CONFIG.REBALANCE_SLIPPAGE_BPS } }
+        : {}),
       prioritizationFeeLamports: { priorityLevelWithMaxLamports: { maxLamports: CONFIG.PRIORITY_FEE_LAMPORTS, priorityLevel: "medium" } },
     });
     let swapHttpRes: Response | null = null;
@@ -515,7 +521,21 @@ async function performSwap(
       return failed;
     }
 
-    const swapRes = (await swapHttpRes.json()) as { swapTransaction: string };
+    const swapRes = (await swapHttpRes.json()) as {
+      swapTransaction: string;
+      dynamicSlippageReport?: {
+        slippageBps?: number;
+        simulatedIncurredSlippageBps?: number;
+        categoryName?: string;
+      };
+    };
+    const dsr = swapRes.dynamicSlippageReport;
+    if (dsr?.slippageBps != null) {
+      const parts = [`${dsr.slippageBps}bps used`];
+      if (dsr.categoryName) parts.push(dsr.categoryName);
+      if (dsr.simulatedIncurredSlippageBps != null) parts.push(`sim ${dsr.simulatedIncurredSlippageBps}bps`);
+      console.log(`[basket] dynamic slippage ${swapLabel}: ${parts.join(", ")} (cap ${CONFIG.REBALANCE_SLIPPAGE_BPS}bps)`);
+    }
     const tx = VersionedTransaction.deserialize(
       Buffer.from(swapRes.swapTransaction, "base64"),
     );
