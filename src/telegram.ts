@@ -137,6 +137,10 @@ export async function sendDailyReport(): Promise<void> {
     msg += `<p>💲 <i>SOL $${solUsd.toFixed(2)}</i></p>`;
   }
 
+  if (basketConfig.lendEnabled && lentValueUsd > 0) {
+    msg += `<p>🌱 <b>Lent $${lentValueUsd.toFixed(2)}</b> <i>· ${lendApy.toFixed(2)}% APY</i></p>`;
+  }
+
   if (pnlUsd != null && pnlPctUsd != null) {
     const icon = pnlUsd >= 0 ? "📈" : "📉";
     const arrow = pnlUsd >= 0 ? "▲" : "▼";
@@ -163,10 +167,6 @@ export async function sendDailyReport(): Promise<void> {
     let line = `🏦 <b>${walletSol.toFixed(4)} SOL</b>`;
     if (solUsd > 0) line += ` <i>($${(walletSol * solUsd).toFixed(2)})</i>`;
     msg += `<p>${line}</p>`;
-  }
-
-  if (basketConfig.lendEnabled && lentValueUsd > 0) {
-    msg += `<p>🏦 <b>Lent $${lentValueUsd.toFixed(2)}</b> <i>· ${lendApy.toFixed(2)}% APY</i></p>`;
   }
 
   if (holdings.length > 0) {

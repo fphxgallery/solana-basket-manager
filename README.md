@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.3.1-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.3.2-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -124,6 +124,9 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.3.2
+- Daily Telegram report shows the **Jupiter Lend** position (`🌱 Lent $X · Y% APY`) directly under the portfolio value line, when lending is on and funds are parked
 
 ### v3.3.1
 - **Dynamic lending buffer** — the liquid buffer now sizes to rebalance demand instead of a flat percent: `max(buffer floor, drift multiple × drift threshold)` of the portfolio, so it never parks below what one rebalance can trim. New `lendBufferDriftMult` knob (default 2.5; 0 = static); `lendBufferPct` becomes the floor. Settings shows both inputs plus a live "effective buffer" readout
