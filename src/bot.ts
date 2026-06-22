@@ -5,6 +5,7 @@ import { store } from "./store.js";
 import { basketStore } from "./basket-store.js";
 import { refreshHoldings, needsRebalance, executeRebalance, reconcileLending } from "./basket.js";
 import { recordSnapshot } from "./value-history.js";
+import { recordTokenSnapshot } from "./token-history.js";
 import { notify, getReportSchedule, sendDailyReport } from "./telegram.js";
 
 let balanceTimer: NodeJS.Timeout | null = null;
@@ -37,6 +38,8 @@ async function refreshBasket() {
     // basketStore.on("holdings") in api.ts handles the SSE broadcast via basketSnapshot()
     // Record value snapshot for 24h chart (fire-and-forget)
     recordSnapshot(basketStore.totalValueSol).catch(() => {});
+    // Per-token price/weight log — feeds offline band backtesting
+    recordTokenSnapshot(basketStore.holdings);
     // Park excess idle USDC into Jupiter Lend — skip while a rebalance is mid-flight
     // so we don't strand funds a swap is about to spend (it withdraws on demand anyway).
     if (!rebalancing) {
