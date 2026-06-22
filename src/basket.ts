@@ -419,13 +419,15 @@ async function ensureLendLiquidity(
   const shortfallUsd = info ? (Number(shortfall) / 10 ** info.decimals) * info.priceUsd : 0;
   console.log(`[lending] sell needs ${shortfall} more ${mint.slice(0, 4)} than in wallet — withdrawing from Jupiter Lend`);
 
+  const sym = basketStore.config.tokens.find((t) => t.mint === mint)?.symbol ?? mint.slice(0, 4);
   const res = await jupiterLend.withdraw(connection, keypair, mint, shortfall);
   if (!res.ok) {
     console.error(`[lending] withdraw failed: ${res.error}`);
-    const sym = basketStore.config.tokens.find((t) => t.mint === mint)?.symbol ?? mint.slice(0, 4);
+    store.addLendingEvent({ id: randomUUID(), timestamp: Date.now(), kind: "withdraw", amountUsd: shortfallUsd, sig: "", status: "failed", note: `skipped ${sym} → SOL sell` });
     notify(`⚠️ <b>Jupiter Lend withdraw failed</b>\nSkipped ${sym} → SOL sell, retry next cycle.`).catch(() => {});
     return { ok: false, withdrewUsd: 0 };
   }
+  store.addLendingEvent({ id: randomUUID(), timestamp: Date.now(), kind: "withdraw", amountUsd: shortfallUsd, sig: res.sig ?? "", status: "confirmed", note: `fund ${sym} → SOL sell` });
   return { ok: true, withdrewUsd: shortfallUsd };
 }
 
@@ -462,9 +464,11 @@ export async function reconcileLending(connection: Connection, keypair: Keypair)
   const res = await jupiterLend.deposit(connection, keypair, lendMint, parkableRaw);
   if (res.ok) {
     console.log(`[lending] deposited $${parkableUsd.toFixed(2)} to Jupiter Lend`);
+    store.addLendingEvent({ id: randomUUID(), timestamp: Date.now(), kind: "deposit", amountUsd: parkableUsd, apyPct: info.apyPct, sig: res.sig ?? "", status: "confirmed" });
     notify(`🏦 <b>Jupiter Lend</b>\nParked $${parkableUsd.toFixed(2)} · ${info.apyPct.toFixed(2)}% APY`).catch(() => {});
   } else {
     console.error(`[lending] deposit failed: ${res.error}`);
+    store.addLendingEvent({ id: randomUUID(), timestamp: Date.now(), kind: "deposit", amountUsd: parkableUsd, apyPct: info.apyPct, sig: "", status: "failed" });
   }
 }
 

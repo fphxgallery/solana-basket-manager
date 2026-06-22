@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.3.8-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.4.0-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -106,6 +106,7 @@ All runtime data lives in `data/` (excluded from git):
 | `data/value-history.json` | portfolio value snapshots (90-day) |
 | `data/token-history.json` | per-token price + weight snapshots (90-day) |
 | `data/trades.json` | rebalance trade log (persists across restarts) |
+| `data/lending-log.json` | Jupiter Lend deposit/withdraw activity (shown in the Logs tab) |
 | `data/telegram.json` | Telegram bot token + chat ID + daily-report schedule |
 | `wallet/keypair.json` | hot wallet keypair — **back this up** |
 
@@ -134,6 +135,9 @@ sudo systemctl status basket-manager
 
 Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
 
+### v3.4.0
+- **Logs tab** — the old "Rebalance Log" is now a unified **Logs** tab covering both rebalance swaps and Jupiter Lend deposits/withdrawals, with All / Rebalances / Lending filter pills. Lending events persist to `data/lending-log.json` and stay out of the trade metrics + value chart. New icon; clear honors the active filter
+
 ### v3.3.8
 - **Price-impact gate** — skip rebalance swaps whose Jupiter quote price impact exceeds the new `maxPriceImpactPct` Basket setting (default 2%, `0` = off); gated swaps are logged and noted in the Telegram report but kept out of the trade log
 
@@ -145,9 +149,6 @@ Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
 
 ### v3.3.5
 - **Fix:** a transient Jupiter Lend `/positions` read failure no longer zeroes the lent balance and triggers a phantom liquidate-and-rebuy. The fold reuses the last good balance on failure; cold start skips rebalancing that cycle
-
-### v3.3.4
-- **Per-token price history** logged to `data/token-history.json` each refresh — groundwork for offline rebalance-band backtesting (the aggregate value chart lacks per-mint prices). 90-day retention, forward-logging only
 
 ## License
 

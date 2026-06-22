@@ -83,6 +83,11 @@ router.post("/trades/clear", (_req: Request, res: Response) => {
   res.json({ ok: true });
 });
 
+router.post("/lending/clear", (_req: Request, res: Response) => {
+  store.clearLending();
+  res.json({ ok: true });
+});
+
 // ── Basket ────────────────────────────────────────────────────────────────────
 
 router.get("/basket", (_req: Request, res: Response) => {

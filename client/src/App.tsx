@@ -1,16 +1,17 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  ArrowRightLeft,
   AlertTriangle,
   BarChart3,
   Check,
   CircleDollarSign,
   ExternalLink,
   KeyRound,
+  Landmark,
   Layers,
   Pencil,
   Plus,
   RefreshCw,
+  ScrollText,
   Settings,
   Trash2,
   TrendingUp,
@@ -27,7 +28,7 @@ import {
   LineElement,
   Filler,
 } from "chart.js";
-import type { AppState, TradeRecord, BasketState, BasketToken, ValuePoint } from "./types.ts";
+import type { AppState, TradeRecord, LendingEvent, BasketState, BasketToken, ValuePoint } from "./types.ts";
 import { formatTime, truncate, Modal, CopyButton } from "./lib.tsx";
 import { CyberBackground } from "./components/CyberBackground.tsx";
 import { AppHeader } from "./components/AppHeader.tsx";
@@ -151,6 +152,7 @@ function Dashboard() {
   const [basket, setBasket] = useState<BasketState | null>(null);
   const [rightTab, setRightTab] = useState<TabKey>("basket");
   const [tradePage, setTradePage] = useState(0);
+  const [logFilter, setLogFilter] = useState<"all" | "rebalance" | "lending">("all");
   const [clearArmed, setClearArmed] = useState(false);
   const [basketEditorOpen, setBasketEditorOpen] = useState(false);
   const [editorTokens, setEditorTokens] = useState<BasketToken[]>([]);
@@ -481,8 +483,9 @@ function Dashboard() {
     }
   }
 
-  // Clear rebalance log — two-click confirm; server clears trades.json and
+  // Clear the log — two-click confirm; server clears the relevant file(s) and
   // broadcasts a fresh snapshot, so the SSE stream updates every client.
+  // Honors the active filter: clears just rebalances, just lending, or both.
   function clearLogs() {
     if (!clearArmed) {
       setClearArmed(true);
@@ -491,7 +494,8 @@ function Dashboard() {
     }
     setClearArmed(false);
     setTradePage(0);
-    fetch("/api/trades/clear", { method: "POST" }).catch(() => {});
+    if (logFilter !== "lending") fetch("/api/trades/clear", { method: "POST" }).catch(() => {});
+    if (logFilter !== "rebalance") fetch("/api/lending/clear", { method: "POST" }).catch(() => {});
   }
 
   // Fetch wallet on load
@@ -593,6 +597,14 @@ function Dashboard() {
               .reduce((s, t) => s + t.profitSol, 0);
             return { ...prev, trades, totalTrades, totalProfitSol };
           }
+          if (type === "lending") {
+            const ev = data as LendingEvent;
+            const exists = prev.lendingEvents?.find((e) => e.id === ev.id);
+            const lendingEvents = exists
+              ? prev.lendingEvents.map((e) => (e.id === ev.id ? ev : e))
+              : [ev, ...(prev.lendingEvents ?? []).slice(0, 99)];
+            return { ...prev, lendingEvents };
+          }
           if (type === "status") return { ...prev, botState: data as AppState["botState"] };
           if (type === "balance") return { ...prev, walletBalanceSol: data as number };
           return prev;
@@ -661,7 +673,7 @@ function Dashboard() {
                 tabs={[
                   { key: "basket", label: "BASKET", icon: Layers, count: basket?.config.tokens.length ?? 0 },
                   { key: "dynamic", label: "DYNAMIC WEIGHT", icon: TrendingUp },
-                  { key: "trades", label: "REBALANCE LOG", icon: ArrowRightLeft, count: state?.trades.length ?? 0 },
+                  { key: "trades", label: "LOGS", icon: ScrollText, count: (state?.trades.length ?? 0) + (state?.lendingEvents?.length ?? 0) },
                   { key: "settings", label: "SETTINGS", icon: Settings },
                 ]}
               />
@@ -689,10 +701,10 @@ function Dashboard() {
                   </button>
                 </div>
               )}
-              {rightTab === "trades" && (state?.trades.length ?? 0) > 0 && (
+              {rightTab === "trades" && ((state?.trades.length ?? 0) + (state?.lendingEvents?.length ?? 0)) > 0 && (
                 <button
                   onClick={clearLogs}
-                  title="Clear the rebalance log"
+                  title={logFilter === "lending" ? "Clear lending events" : logFilter === "rebalance" ? "Clear rebalance log" : "Clear all logs"}
                   className={`flex items-center gap-1.5 text-[10.5px] rounded-md transition-colors flex-shrink-0 border ${
                     clearArmed
                       ? "text-bad bg-[#1a0d10] border-[#3a1418] hover:bg-[#231013]"
@@ -706,21 +718,52 @@ function Dashboard() {
             </div>
 
             {/* Rebalance log tab */}
-            {rightTab === "trades" && (
-              <>
-                {!state || state.trades.length === 0 ? (
-                  <div className="px-4 py-12 text-center text-dim text-sm">
-                    No rebalances yet — start the bot to track and rebalance the basket
+            {rightTab === "trades" && (() => {
+              const trades = state?.trades ?? [];
+              const lends = state?.lendingEvents ?? [];
+              const rows: Array<{ t: "trade"; ts: number; data: TradeRecord } | { t: "lend"; ts: number; data: LendingEvent }> = [
+                ...(logFilter !== "lending" ? trades.map((d) => ({ t: "trade" as const, ts: d.timestamp, data: d })) : []),
+                ...(logFilter !== "rebalance" ? lends.map((d) => ({ t: "lend" as const, ts: d.timestamp, data: d })) : []),
+              ].sort((a, b) => b.ts - a.ts);
+              const PAGE_SIZE = 12;
+              const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+              const page = Math.min(tradePage, totalPages - 1);
+              const pageRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+              const filters: Array<[typeof logFilter, string]> = [["all", "All"], ["rebalance", "Rebalances"], ["lending", "Lending"]];
+              return (
+                <>
+                  {/* Filter pills */}
+                  <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-divider">
+                    {filters.map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => { setLogFilter(key); setTradePage(0); }}
+                        className={`text-[10.5px] rounded-md border transition-colors ${
+                          logFilter === key
+                            ? "text-cyan border-cyan-line bg-white/[0.03]"
+                            : "text-dim border-cardline hover:text-muted"
+                        }`}
+                        style={{ padding: "3px 9px" }}
+                      >
+                        {label}
+                      </button>
+                    ))}
                   </div>
-                ) : (() => {
-                  const PAGE_SIZE = 12;
-                  const totalPages = Math.ceil(state.trades.length / PAGE_SIZE);
-                  const page = Math.min(tradePage, totalPages - 1);
-                  const pageTrades = state.trades.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-                  return (
+                  {rows.length === 0 ? (
+                    <div className="px-4 py-12 text-center text-dim text-sm">
+                      {logFilter === "lending"
+                        ? "No lending activity yet"
+                        : logFilter === "rebalance"
+                        ? "No rebalances yet — start the bot to track and rebalance the basket"
+                        : "No activity yet — start the bot to track rebalances and lending"}
+                    </div>
+                  ) : (
                     <>
                       <div className="divide-y divide-divider">
-                        {pageTrades.map((t) => (
+                        {pageRows.map((row) => {
+                          if (row.t === "trade") {
+                            const t = row.data;
+                            return (
                           <div key={t.id} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
                             <div className="flex items-center gap-2 mb-1">
                               <div className="flex items-center gap-2">
@@ -767,7 +810,46 @@ function Dashboard() {
                               </div>
                             )}
                           </div>
-                        ))}
+                            );
+                          }
+                          const ev = row.data;
+                          return (
+                            <div key={ev.id} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
+                              <div className="flex items-center gap-2 mb-1">
+                                <div className="flex items-center gap-2">
+                                  <TradeStatusBadge status={ev.status} />
+                                  <Landmark style={{ width: 12, height: 12 }} className="text-cyan flex-shrink-0" />
+                                  <span className="text-[11px] text-ink">
+                                    {ev.kind === "deposit" ? "Parked" : "Withdrew"} ${ev.amountUsd.toFixed(2)} {ev.kind === "deposit" ? "to" : "from"} Jupiter Lend
+                                  </span>
+                                </div>
+                                <div className="flex-1 text-left ml-3">
+                                  {ev.sig && (
+                                    <a
+                                      href={`https://solscan.io/tx/${ev.sig}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="inline-flex items-center gap-1 text-[10px] text-dim hover:text-cyan transition-colors tabular-nums"
+                                      title={ev.sig}
+                                    >
+                                      {truncate(ev.sig, 12)}
+                                      <ExternalLink style={{ width: 9, height: 9 }} />
+                                    </a>
+                                  )}
+                                </div>
+                                <span className="text-[10px] text-dim">{formatTime(ev.timestamp)}</span>
+                              </div>
+                              {(ev.apyPct != null || ev.note) && (
+                                <div className="flex items-center justify-between text-[10px]">
+                                  <span className="text-dim">{ev.note ?? ""}</span>
+                                  {ev.apyPct != null && (
+                                    <span className="text-cyan tabular-nums">{ev.apyPct.toFixed(2)}% APY</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                       {totalPages > 1 && (
                         <div className="flex items-center justify-between px-4 py-2 border-t border-divider">
@@ -789,10 +871,10 @@ function Dashboard() {
                         </div>
                       )}
                     </>
-                  );
-                })()}
-              </>
-            )}
+                  )}
+                </>
+              );
+            })()}
 
             {/* Basket tab — holdings table only (actions live in the tab bar) */}
             {rightTab === "basket" && (

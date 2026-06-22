@@ -82,9 +82,21 @@ export interface ValuePoint {
   valueUsd: number;
 }
 
+export interface LendingEvent {
+  id: string;
+  timestamp: number;
+  kind: "deposit" | "withdraw";
+  amountUsd: number;
+  apyPct?: number;
+  sig: string;
+  status: "confirmed" | "failed";
+  note?: string;
+}
+
 export interface AppState {
   botState: BotState;
   trades: TradeRecord[];
+  lendingEvents: LendingEvent[];
   totalProfitSol: number;
   totalTrades: number;
   walletBalanceSol: number | null;

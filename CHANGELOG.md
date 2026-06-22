@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.4.0
+- **Logs tab (was Rebalance Log)** — renamed and unified into a single feed covering rebalance swaps *and* Jupiter Lend activity, with **All / Rebalances / Lending** filter pills and a new icon. Lend deposits and withdrawals (incl. failures, and the withdraw-to-fund-a-sell context) now show as their own rows with a Solscan link and APY, instead of being console-only. Lending events are stored separately in `data/lending-log.json` and deliberately kept out of `trades.json` — so they never pollute rebalance cost/profit metrics or draw false markers on the value chart. The Clear button honors the active filter (clears rebalances, lending, or both). Backend: new `LendingEvent` store + `/api/lending/clear`, broadcast over SSE like trades
+
 ### v3.3.8
 - **Price-impact gate** — skips a rebalance swap when the Jupiter quote's price impact exceeds the new `maxPriceImpactPct` setting (Basket Settings, default 2%, `0` = off). Blocks expensive fills into thin pools — the kind that cost 2.84% on a recent STIX leg — checked at quote time before the swap is sent. Gated swaps are logged to journalctl and folded into the rebalance Telegram report (`• skipped STIX → SOL (impact 2.8% > 2% cap)`), but deliberately kept out of the trade log and value chart since they're non-executions. Live-tunable, no restart. Note: a permanently thin token can stay gated and drift without rebalancing — the Telegram line surfaces it
 
