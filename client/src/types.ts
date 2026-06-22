@@ -51,6 +51,7 @@ export interface BasketState {
     lendEnabled: boolean;
     lendMint: string;
     lendBufferPct: number;
+    lendBufferDriftMult: number;
     lendMinDepositUsd: number;
   };
   holdings: TokenHolding[];

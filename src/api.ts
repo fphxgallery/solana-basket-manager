@@ -132,7 +132,7 @@ router.put("/basket/tokens", (req: Request, res: Response) => {
 
 // Update basket settings (drift threshold, rebalance interval)
 router.patch("/basket/settings", (req: Request, res: Response) => {
-  const { driftThresholdPct, rebalanceIntervalHours, hwmEnabled, hwmHalfLifeDays, curvePoints, curveCap, minSwapUsd, dynamicWeightMint, reserveMint, reserveFloorPct, lendEnabled, lendMint, lendBufferPct, lendMinDepositUsd } = req.body as {
+  const { driftThresholdPct, rebalanceIntervalHours, hwmEnabled, hwmHalfLifeDays, curvePoints, curveCap, minSwapUsd, dynamicWeightMint, reserveMint, reserveFloorPct, lendEnabled, lendMint, lendBufferPct, lendBufferDriftMult, lendMinDepositUsd } = req.body as {
     driftThresholdPct?: number;
     rebalanceIntervalHours?: number;
     hwmEnabled?: boolean;
@@ -146,6 +146,7 @@ router.patch("/basket/settings", (req: Request, res: Response) => {
     lendEnabled?: boolean;
     lendMint?: string;
     lendBufferPct?: number;
+    lendBufferDriftMult?: number;
     lendMinDepositUsd?: number;
   };
   const patch: Parameters<typeof basketStore.updateSettings>[0] = {};
@@ -265,6 +266,13 @@ router.patch("/basket/settings", (req: Request, res: Response) => {
       return;
     }
     patch.lendBufferPct = lendBufferPct;
+  }
+  if (lendBufferDriftMult != null) {
+    if (typeof lendBufferDriftMult !== "number" || lendBufferDriftMult < 0 || lendBufferDriftMult > 50) {
+      res.status(400).json({ error: "lendBufferDriftMult must be a number in [0, 50]" });
+      return;
+    }
+    patch.lendBufferDriftMult = lendBufferDriftMult;
   }
   if (lendMinDepositUsd != null) {
     if (typeof lendMinDepositUsd !== "number" || lendMinDepositUsd < 0) {

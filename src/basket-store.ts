@@ -23,7 +23,8 @@ export interface BasketConfig {
   // ── Jupiter Lend (idle-USDC yield) ──
   lendEnabled: boolean;           // master switch; false ships a no-op
   lendMint: string;               // underlying token to park (default USDC, usually == dynamicWeightMint)
-  lendBufferPct: number;          // keep this % of TOTAL PORTFOLIO value liquid in-wallet; park the rest of lendMint
+  lendBufferPct: number;          // floor: keep at least this % of TOTAL PORTFOLIO value liquid in-wallet
+  lendBufferDriftMult: number;    // dynamic buffer = max(lendBufferPct, mult × driftThresholdPct) % of portfolio; 0 = static
   lendMinDepositUsd: number;      // don't deposit/withdraw smaller than this (gas floor)
 }
 
@@ -58,6 +59,7 @@ const DEFAULTS: BasketConfig = {
   lendEnabled: false,
   lendMint: USDC_MINT,
   lendBufferPct: 4,
+  lendBufferDriftMult: 2.5,
   lendMinDepositUsd: 10,
 };
 

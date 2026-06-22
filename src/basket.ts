@@ -399,7 +399,7 @@ async function ensureLendLiquidity(
  * during a rebalance (ensureLendLiquidity). No-op unless lending is enabled.
  */
 export async function reconcileLending(connection: Connection, keypair: Keypair): Promise<void> {
-  const { lendEnabled, lendMint, lendBufferPct, lendMinDepositUsd } = basketStore.config;
+  const { lendEnabled, lendMint, lendBufferPct, lendBufferDriftMult, lendMinDepositUsd, driftThresholdPct } = basketStore.config;
   if (!lendEnabled) return;
 
   const totalValueUsd = basketStore.totalValueUsd;
@@ -411,7 +411,11 @@ export async function reconcileLending(connection: Connection, keypair: Keypair)
   const walletRaw = await walletRawBalance(connection, keypair.publicKey, lendMint);
   const walletUsd = (Number(walletRaw) / 10 ** info.decimals) * info.priceUsd;
 
-  const bufferUsd = (totalValueUsd * lendBufferPct) / 100;
+  // Dynamic buffer: never park below what a single rebalance can trim from the sleeve.
+  // The smallest rebalance moves ~driftThresholdPct of the book, so size the buffer to a
+  // small multiple of that, with lendBufferPct as a hard floor.
+  const bufferPct = Math.max(lendBufferPct, lendBufferDriftMult * driftThresholdPct);
+  const bufferUsd = (totalValueUsd * bufferPct) / 100;
   const parkableUsd = walletUsd - bufferUsd;
   if (parkableUsd < lendMinDepositUsd) return; // sleeve below buffer, or dust — hold
 

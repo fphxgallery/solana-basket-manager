@@ -13,7 +13,7 @@ export interface SettingsTabProps {
   onCreate: () => void;
   // basket settings
   basket: BasketState | null;
-  onSaveSettings: (patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; minSwapUsd?: number; lendEnabled?: boolean; lendBufferPct?: number; lendMinDepositUsd?: number }) => void;
+  onSaveSettings: (patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; minSwapUsd?: number; lendEnabled?: boolean; lendBufferPct?: number; lendBufferDriftMult?: number; lendMinDepositUsd?: number }) => void;
   // telegram
   telegram: TelegramInfo | null;
   telegramToken: string;
@@ -125,13 +125,35 @@ export function SettingsTab(p: SettingsTabProps) {
           </div>
           {p.basket?.config.lendEnabled && (
             <div className="space-y-3">
-              <label className="block">
-                <span className="text-[11px] text-dim block mb-1">Liquid buffer (% of portfolio)</span>
-                <input type="number" min="0" max="100" step="0.5"
-                  defaultValue={p.basket?.config.lendBufferPct ?? 4}
-                  onBlur={(e) => p.onSaveSettings({ lendBufferPct: parseFloat(e.target.value) })}
-                  className={input} />
-              </label>
+              <div className="grid grid-cols-2 gap-2">
+                <label className="block">
+                  <span className="text-[11px] text-dim block mb-1">Buffer floor (% portfolio)</span>
+                  <input type="number" min="0" max="100" step="0.5"
+                    defaultValue={p.basket?.config.lendBufferPct ?? 4}
+                    onBlur={(e) => p.onSaveSettings({ lendBufferPct: parseFloat(e.target.value) })}
+                    className={input} />
+                </label>
+                <label className="block">
+                  <span className="text-[11px] text-dim block mb-1">Drift multiple (×)</span>
+                  <input type="number" min="0" max="50" step="0.5"
+                    defaultValue={p.basket?.config.lendBufferDriftMult ?? 2.5}
+                    onBlur={(e) => p.onSaveSettings({ lendBufferDriftMult: parseFloat(e.target.value) })}
+                    className={input} />
+                </label>
+              </div>
+              {(() => {
+                const floor = p.basket?.config.lendBufferPct ?? 4;
+                const mult = p.basket?.config.lendBufferDriftMult ?? 2.5;
+                const drift = p.basket?.config.driftThresholdPct ?? 1;
+                const eff = Math.max(floor, mult * drift);
+                const driven = mult * drift > floor;
+                return (
+                  <div className="text-[10px] text-dim">
+                    Effective buffer: <span className="text-muted tabular-nums">{eff.toFixed(1)}%</span>{" "}
+                    {driven ? `(${mult}× ${drift}% drift)` : `(floor)`} of portfolio kept liquid
+                  </div>
+                );
+              })()}
               <label className="block">
                 <span className="text-[11px] text-dim block mb-1">Min deposit ($)</span>
                 <input type="number" min="0" max="1000" step="1"
