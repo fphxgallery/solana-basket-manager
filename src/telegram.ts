@@ -145,10 +145,6 @@ export async function sendDailyReport(): Promise<void> {
     }
   }
 
-  if (basketConfig.lendEnabled && lentValueUsd > 0) {
-    msg += `<p>🌱 <b>Lent $${lentValueUsd.toFixed(2)}</b> <i>· ${lendApy.toFixed(2)}% APY</i></p>`;
-  }
-
   if (pnlUsd != null && pnlPctUsd != null) {
     const icon = pnlUsd >= 0 ? "📈" : "📉";
     const arrow = pnlUsd >= 0 ? "▲" : "▼";
