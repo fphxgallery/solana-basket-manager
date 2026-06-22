@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.3.6-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.3.7-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -134,6 +134,9 @@ sudo systemctl status basket-manager
 
 Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
 
+### v3.3.7
+- **Jupiter Lend read resilience** — retry-with-backoff (honoring `Retry-After`) on 429/5xx plus a 4-min per-endpoint cache with stale-on-error fallback, so the shared lite host's rate-limits and timeouts no longer surface as failed reads. Positions cache invalidated after deposit/withdraw
+
 ### v3.3.6
 - **Fix:** removed a duplicate `🌱 Lent` line in the daily Telegram report (the second slot is the `🌱 Earned` line, shown once realized lend earnings clear $0)
 
@@ -145,9 +148,6 @@ Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
 
 ### v3.3.3
 - **Lend earnings tracking** — realized Jupiter Lend yield (lifetime + resettable "this period") in Settings → Lending and the daily report, separate from the forward APY
-
-### v3.3.0 – v3.3.2
-- **Jupiter Lend** integration — park idle USDC into Jupiter Lend Earn for yield, with a configurable liquid buffer, withdraw-on-demand to fund rebalances, and lent-balance folding so parking never skews drift. Off by default. (v3.3.1 dynamic buffer, v3.3.2 daily-report line)
 
 ## License
 

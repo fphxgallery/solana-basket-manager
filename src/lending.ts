@@ -44,18 +44,60 @@ interface PositionEntry {
   underlyingAssets: string;
 }
 
-// /tokens changes slowly (rates, price) — cache briefly so a refresh + reconcile in
-// the same cycle don't double-fetch.
-let tokensCache: { at: number; vaults: VaultEntry[] } | null = null;
-const TOKENS_TTL_MS = 60_000;
+// ── Resilient reads ─────────────────────────────────────────────────────────────
+// The lite Lend host is shared/no-key: it rate-limits (429) and times out (504).
+// Reads retry with backoff, then fall back to a short per-endpoint cache so a burst
+// of failures never drops the lent balance out of accounting.
+const RETRYABLE = new Set([429, 500, 502, 503, 504]);
+const MAX_TRIES = 3;
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+async function lendGet<T>(path: string): Promise<T> {
+  const name = path.split("?")[0];
+  let lastErr = name;
+  for (let attempt = 0; attempt < MAX_TRIES; attempt++) {
+    let res: Response | null = null;
+    try {
+      res = await fetch(`${CONFIG.JUPITER_LEND_BASE_URL}${path}`);
+    } catch (e) {
+      lastErr = `${name} ${e instanceof Error ? e.message : e}`;
+    }
+    if (res?.ok) return (await res.json()) as T;
+    if (res) lastErr = `${name} ${res.status}`;
+    const retryable = !res || RETRYABLE.has(res.status);
+    if (!retryable || attempt === MAX_TRIES - 1) break;
+    // Honor Retry-After (429s often send it); else exponential backoff.
+    const retryAfter = res ? Number(res.headers.get("retry-after")) : 0;
+    await sleep(retryAfter > 0 ? retryAfter * 1000 : 500 * (attempt + 1) ** 2);
+  }
+  throw new Error(`lend ${lastErr}`);
+}
+
+// Per-endpoint cache, keyed by full path (so per-owner). On fetch failure it serves
+// the last good value (stale-on-error) — a transient 429/504 burst stays invisible to
+// pricing/weights. TTL > refresh interval (3 min) so most refreshes are served cached.
+const cache = new Map<string, { at: number; value: unknown }>();
+async function lendGetCached<T>(path: string, ttlMs: number): Promise<T> {
+  const hit = cache.get(path);
+  if (hit && Date.now() - hit.at < ttlMs) return hit.value as T;
+  try {
+    const value = await lendGet<T>(path);
+    cache.set(path, { at: Date.now(), value });
+    return value;
+  } catch (e) {
+    if (hit) {
+      const ageS = Math.round((Date.now() - hit.at) / 1000);
+      console.warn(`[lending] ${path.split("?")[0]} failed (${e instanceof Error ? e.message : e}) — serving cached ${ageS}s old`);
+      return hit.value as T;
+    }
+    throw e;
+  }
+}
+
+const READ_TTL_MS = 4 * 60_000;
 
 async function fetchVaults(): Promise<VaultEntry[]> {
-  if (tokensCache && Date.now() - tokensCache.at < TOKENS_TTL_MS) return tokensCache.vaults;
-  const res = await fetch(`${CONFIG.JUPITER_LEND_BASE_URL}/tokens`);
-  if (!res.ok) throw new Error(`lend /tokens ${res.status}`);
-  const vaults = (await res.json()) as VaultEntry[];
-  tokensCache = { at: Date.now(), vaults };
-  return vaults;
+  return lendGetCached<VaultEntry[]>("/tokens", READ_TTL_MS);
 }
 
 export interface LendingVenue {
@@ -100,6 +142,8 @@ async function buildAndSend(
       return { ok: false, sig, error: `lend ${path} failed on-chain: ${JSON.stringify(conf.value.err)}` };
     }
     console.log(`[lending] ${path} confirmed: ${sig}`);
+    // Our position just changed — drop the cached /positions so the next read is fresh.
+    cache.delete(`/positions?users=${keypair.publicKey.toBase58()}`);
     return { ok: true, sig };
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : String(e) };
@@ -120,17 +164,19 @@ export const jupiterLend: LendingVenue = {
   },
 
   async getEarnings(owner, vaultAddress) {
-    const res = await fetch(`${CONFIG.JUPITER_LEND_BASE_URL}/earnings?user=${owner.toBase58()}&positions=${vaultAddress}`);
-    if (!res.ok) throw new Error(`lend /earnings ${res.status}`);
-    const rows = (await res.json()) as Array<{ address: string; earnings: number | string }>;
+    const rows = await lendGetCached<Array<{ address: string; earnings: number | string }>>(
+      `/earnings?user=${owner.toBase58()}&positions=${vaultAddress}`,
+      READ_TTL_MS,
+    );
     const r = rows.find((x) => x.address === vaultAddress);
     return r ? BigInt(Math.round(Number(r.earnings))) : 0n;
   },
 
   async getPosition(owner, mint) {
-    const res = await fetch(`${CONFIG.JUPITER_LEND_BASE_URL}/positions?users=${owner.toBase58()}`);
-    if (!res.ok) throw new Error(`lend /positions ${res.status}`);
-    const positions = (await res.json()) as PositionEntry[];
+    const positions = await lendGetCached<PositionEntry[]>(
+      `/positions?users=${owner.toBase58()}`,
+      READ_TTL_MS,
+    );
     const p = positions.find((x) => x.token?.assetAddress === mint);
     if (!p) return { underlyingRaw: 0n, decimals: 6 };
     return { underlyingRaw: BigInt(p.underlyingAssets || "0"), decimals: p.token.decimals };

@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.3.7
+- **Jupiter Lend read resilience.** The shared no-key lite host rate-limits (429) and times out (504); these were surfacing as failed reads that the v3.3.5 cache then had to absorb every cycle. Lend reads (`/tokens`, `/positions`, `/earnings`) now **retry with backoff** (honoring `Retry-After`) on 429/5xx, then fall back to a **4-minute per-endpoint cache with stale-on-error** — a burst of rate-limits is invisible to pricing/weights. The positions cache is invalidated after a deposit/withdraw so post-trade reads stay fresh. TTL exceeds the 3-min refresh interval, so most refreshes are served from cache, cutting call volume
+
 ### v3.3.6
 - **Fix: duplicate "Lent" line in the daily Telegram report.** A leftover block printed the `🌱 Lent $X · Y% APY` line twice; the second slot was meant to be the `🌱 Earned` line (which only shows once realized lend earnings are above zero). Removed the dupe
 
