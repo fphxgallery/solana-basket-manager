@@ -10,6 +10,18 @@ import type { JupiterQuote } from "./types.js";
 
 const WSOL = CONFIG.WSOL_MINT;
 
+// Last successfully-read Jupiter Lend position, reused when a transient read fails
+// (e.g. a /positions 504) so the lent balance isn't dropped from accounting — which
+// would misprice the lendMint as underweight and fire a phantom liquidation.
+let lastLentPosition: { underlyingRaw: bigint; decimals: number } | null = null;
+// True when the latest refresh could neither read the lend position nor fall back
+// on a cached one. Weights are untrustworthy this cycle — suppress rebalancing.
+let lendFoldUntrusted = false;
+/** Whether the latest lend accounting fold is trustworthy enough to rebalance on. */
+export function isLendFoldUntrusted(): boolean {
+  return lendFoldUntrusted;
+}
+
 // ── Dynamic USDC weight ───────────────────────────────────────────────────────
 
 function dynamicUsdcWeight(pnlPct: number): number {
@@ -195,10 +207,21 @@ export async function refreshHoldings(
   // Fold the lent balance back into the lendMint holding BEFORE pricing/weights, or
   // the bot would see lendMint underweight and buy more — fighting its own parking.
   const { lendEnabled, lendMint } = basketStore.config;
+  lendFoldUntrusted = false;
   let lentUi = 0;
   let lendApy = 0;
   let lendPriceUsd = 0;
   let lendEarningsLifetimeUi = 0;
+  // Folds a known lent position back into the lendMint wallet balance.
+  const foldLent = (underlyingRaw: bigint, decimals: number) => {
+    if (underlyingRaw <= 0n) return;
+    lentUi = Number(underlyingRaw) / 10 ** decimals;
+    const wb = balances[lendMint] ?? { uiAmount: 0, rawAmount: "0" };
+    balances[lendMint] = {
+      uiAmount: wb.uiAmount + lentUi,
+      rawAmount: (BigInt(wb.rawAmount) + underlyingRaw).toString(),
+    };
+  };
   if (lendEnabled && mints.includes(lendMint)) {
     try {
       const [pos, info] = await Promise.all([
@@ -211,17 +234,21 @@ export async function refreshHoldings(
         const earningsRaw = await jupiterLend.getEarnings(walletPk, info.vaultAddress).catch(() => 0n);
         lendEarningsLifetimeUi = Number(earningsRaw) / 10 ** info.decimals;
       }
-      if (pos.underlyingRaw > 0n) {
-        lentUi = Number(pos.underlyingRaw) / 10 ** pos.decimals;
-        const wb = balances[lendMint] ?? { uiAmount: 0, rawAmount: "0" };
-        balances[lendMint] = {
-          uiAmount: wb.uiAmount + lentUi,
-          rawAmount: (BigInt(wb.rawAmount) + pos.underlyingRaw).toString(),
-        };
-      }
+      // Cache the reading (zero is valid — it means the sleeve really is unparked).
+      lastLentPosition = { underlyingRaw: pos.underlyingRaw, decimals: pos.decimals };
+      foldLent(pos.underlyingRaw, pos.decimals);
     } catch (e) {
-      // Lend read failure must not break the whole refresh — treat as zero lent this cycle.
+      // Lend read failure (e.g. /positions 504) must NOT zero the lent balance —
+      // that mis-reads lendMint as underweight and triggers a phantom liquidation.
       console.error("[lending] position read failed:", e instanceof Error ? e.message : e);
+      if (lastLentPosition && lastLentPosition.underlyingRaw > 0n) {
+        foldLent(lastLentPosition.underlyingRaw, lastLentPosition.decimals);
+        console.warn(`[lending] reused cached lent balance ${lentUi.toFixed(2)} ${lendMint.slice(0, 4)} after read failure`);
+      } else {
+        // Nothing cached (cold start) — weights are untrustworthy; block rebalancing.
+        lendFoldUntrusted = true;
+        console.warn("[lending] no cached lent balance — suppressing rebalance this cycle");
+      }
     }
   }
 

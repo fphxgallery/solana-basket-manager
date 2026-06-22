@@ -3,7 +3,7 @@ import { CONFIG } from "./config.js";
 import { loadKeypair } from "./wallet.js";
 import { store } from "./store.js";
 import { basketStore } from "./basket-store.js";
-import { refreshHoldings, needsRebalance, executeRebalance, reconcileLending } from "./basket.js";
+import { refreshHoldings, needsRebalance, executeRebalance, reconcileLending, isLendFoldUntrusted } from "./basket.js";
 import { recordSnapshot } from "./value-history.js";
 import { recordTokenSnapshot } from "./token-history.js";
 import { notify, getReportSchedule, sendDailyReport } from "./telegram.js";
@@ -52,6 +52,12 @@ async function refreshBasket() {
 
 async function tryRebalance() {
   if (!connection || !keypair || rebalancing) return;
+  // Lend balance couldn't be established this cycle — weights are untrustworthy,
+  // skip rather than risk a phantom rebalance off a mispriced sleeve.
+  if (isLendFoldUntrusted()) {
+    console.warn("[bot] skipping rebalance — lend balance unknown this cycle");
+    return;
+  }
   if (!needsRebalance()) return;
 
   rebalancing = true;

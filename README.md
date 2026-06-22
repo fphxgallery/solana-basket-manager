@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.3.4-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.3.5-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -124,6 +124,9 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.3.5
+- **Fix: Jupiter Lend read failure no longer triggers a phantom rebalance.** When the lend `/positions` call failed (e.g. a transient 504), the accounting fold treated the parked USDC as zero — the portfolio momentarily under-counted the lent sleeve, read `lendMint` as badly underweight, and liquidated the whole basket into USDC, then bought it all back the next cycle when the read recovered (a costly round-trip, plus a wasted Lend deposit/withdraw). The fold now **reuses the last successfully-read lent balance** on failure instead of zeroing it, so a transient read error is invisible to pricing/weights. On cold start with no cached balance, the bot **skips rebalancing for that cycle** rather than act on untrustworthy weights
 
 ### v3.3.4
 - **Per-token price history** — logs each token's price (in SOL) and weight on every refresh to `data/token-history.json`, alongside the existing aggregate value chart. This is groundwork for offline rebalance-band backtesting, which the aggregate value history can't support since it lacks per-mint prices. Compact on disk (8 sig-fig prices to preserve tiny memecoin values, 2-decimal weights), 90-day retention, skips unpriced tokens so a bad quote can't poison the data. Forward-logging only — no backfill, so the dataset accrues from this release onward
