@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.3.2-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.3.3-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -124,6 +124,9 @@ sudo systemctl status basket-manager
 - `.env` and `wallet/` are gitignored and never committed
 
 ## Changelog
+
+### v3.3.3
+- **Lend earnings tracking** — surfaces realized Jupiter Lend yield (distinct from the forward APY), pulled from Jupiter's `/earnings`: lifetime earned + a resettable "this period" total. Shown in Settings → Lending (with a reset link) and the daily Telegram report (`🌱 Earned $X lifetime · +$Y this period`). The period baseline seeds on first observation, so it won't retroactively count pre-existing yield
 
 ### v3.3.2
 - Daily Telegram report shows the **Jupiter Lend** position (`🌱 Lent $X · Y% APY`) directly under the portfolio value line, when lending is on and funds are parked

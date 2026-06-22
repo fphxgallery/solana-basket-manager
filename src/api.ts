@@ -42,6 +42,9 @@ function basketSnapshot() {
     lentValueUsd: basketStore.lentValueUsd,
     lentBalanceUi: basketStore.lentBalanceUi,
     lendApy: basketStore.lendApy,
+    lendEarningsLifetimeUsd: basketStore.lendEarningsLifetimeUsd,
+    lendEarningsPeriodUsd: basketStore.lendEarningsPeriodUsd,
+    lendEarningsBaselineAt: basketStore.lendEarningsBaselineAt,
   };
 }
 
@@ -289,6 +292,12 @@ router.patch("/basket/settings", (req: Request, res: Response) => {
 router.post("/basket/reset-baseline", (_req: Request, res: Response) => {
   basketStore.resetBaseline();
   res.json({ baselineValueSol: basketStore.baselineValueSol, baselineTimestamp: basketStore.baselineTimestamp });
+});
+
+// Reset the Jupiter Lend earnings "since" period to now
+router.post("/basket/reset-lend-earnings", (_req: Request, res: Response) => {
+  basketStore.resetLendEarnings();
+  res.json({ lendEarningsBaselineAt: basketStore.lendEarningsBaselineAt });
 });
 
 // Manual rebalance trigger — force-executes (bypasses needsRebalance check), awaits completion

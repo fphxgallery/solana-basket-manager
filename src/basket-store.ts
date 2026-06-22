@@ -83,6 +83,12 @@ class BasketStore extends EventEmitter {
   lentValueUsd = 0;
   lentBalanceUi = 0;  // lent amount in whole lendMint tokens
   lendApy = 0;        // current vault APY, percent
+  lendEarningsLifetimeUi = 0;   // cumulative earned, whole lendMint tokens (transient)
+  lendEarningsLifetimeUsd = 0;  // transient
+  lendEarningsPeriodUsd = 0;    // lifetime − baseline, transient
+  /** Earnings baseline for the "since" period — persisted. */
+  lendEarningsBaselineUi: number | null = null;
+  lendEarningsBaselineAt: number | null = null;
 
   get pnlSol(): number | null {
     if (this.baselineValueSol == null || this.totalValueSol === 0) return null;
@@ -121,6 +127,8 @@ class BasketStore extends EventEmitter {
           lastRebalanceAt?: number;
           hwmValueUsd?: number;
           hwmCapturedAt?: number;
+          lendEarningsBaselineUi?: number;
+          lendEarningsBaselineAt?: number;
         };
         if (raw.priceCache) this.priceCache = raw.priceCache;
         if (raw.totalValueUsd) this.totalValueUsd = raw.totalValueUsd;
@@ -130,7 +138,9 @@ class BasketStore extends EventEmitter {
         if (raw.lastRebalanceAt != null) this.lastRebalanceAt = raw.lastRebalanceAt;
         if (raw.hwmValueUsd != null) this.hwmValueUsd = raw.hwmValueUsd;
         if (raw.hwmCapturedAt != null) this.hwmCapturedAt = raw.hwmCapturedAt;
-        const { priceCache: _pc, totalValueUsd: _tvu, baselineValueSol: _bv, baselineValueUsd: _bvu, baselineTimestamp: _bt, lastRebalanceAt: _lr, hwmValueUsd: _hv, hwmCapturedAt: _hc, ...config } = raw;
+        if (raw.lendEarningsBaselineUi != null) this.lendEarningsBaselineUi = raw.lendEarningsBaselineUi;
+        if (raw.lendEarningsBaselineAt != null) this.lendEarningsBaselineAt = raw.lendEarningsBaselineAt;
+        const { priceCache: _pc, totalValueUsd: _tvu, baselineValueSol: _bv, baselineValueUsd: _bvu, baselineTimestamp: _bt, lastRebalanceAt: _lr, hwmValueUsd: _hv, hwmCapturedAt: _hc, lendEarningsBaselineUi: _leb, lendEarningsBaselineAt: _lea, ...config } = raw;
         // Merge defaults — a basket.json missing a field (old version, hand edit)
         // must not produce undefined settings (NaN/dead drift checks)
         return { ...DEFAULTS, ...config };
@@ -152,6 +162,8 @@ class BasketStore extends EventEmitter {
         lastRebalanceAt: this.lastRebalanceAt,
         hwmValueUsd: this.hwmValueUsd,
         hwmCapturedAt: this.hwmCapturedAt,
+        lendEarningsBaselineUi: this.lendEarningsBaselineUi,
+        lendEarningsBaselineAt: this.lendEarningsBaselineAt,
       }, null, 2));
     } catch (e) {
       console.error("[basket-store] save failed:", e);
@@ -202,12 +214,34 @@ class BasketStore extends EventEmitter {
     this.emit("changed"); // push updated pnl (now 0%) to SSE clients immediately
   }
 
-  setLendState(s: { lentValueSol: number; lentValueUsd: number; lentBalanceUi: number; lendApy: number }) {
+  setLendState(s: {
+    lentValueSol: number; lentValueUsd: number; lentBalanceUi: number; lendApy: number;
+    earningsLifetimeUi: number; priceUsd: number;
+  }) {
     this.lentValueSol = s.lentValueSol;
     this.lentValueUsd = s.lentValueUsd;
     this.lentBalanceUi = s.lentBalanceUi;
     this.lendApy = s.lendApy;
-    // No _save / emit — setHoldings runs right after in the same refresh and broadcasts.
+    this.lendEarningsLifetimeUi = s.earningsLifetimeUi;
+    this.lendEarningsLifetimeUsd = s.earningsLifetimeUi * s.priceUsd;
+    // First observation seeds the baseline so "this period" starts at 0 rather than counting
+    // earnings that accrued before the feature existed.
+    if (this.lendEarningsBaselineUi == null && s.earningsLifetimeUi > 0) {
+      this.lendEarningsBaselineUi = s.earningsLifetimeUi;
+      this.lendEarningsBaselineAt = Date.now();
+      this._save();
+    }
+    const periodUi = Math.max(0, s.earningsLifetimeUi - (this.lendEarningsBaselineUi ?? s.earningsLifetimeUi));
+    this.lendEarningsPeriodUsd = periodUi * s.priceUsd;
+    // No emit here — setHoldings runs right after in the same refresh and broadcasts.
+  }
+
+  resetLendEarnings() {
+    this.lendEarningsBaselineUi = this.lendEarningsLifetimeUi;
+    this.lendEarningsBaselineAt = Date.now();
+    this.lendEarningsPeriodUsd = 0;
+    this._save();
+    this.emit("changed");
   }
 
   updateHwm(valueUsd: number) {

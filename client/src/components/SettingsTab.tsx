@@ -14,6 +14,7 @@ export interface SettingsTabProps {
   // basket settings
   basket: BasketState | null;
   onSaveSettings: (patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; minSwapUsd?: number; lendEnabled?: boolean; lendBufferPct?: number; lendBufferDriftMult?: number; lendMinDepositUsd?: number }) => void;
+  onResetLendEarnings: () => void;
   // telegram
   telegram: TelegramInfo | null;
   telegramToken: string;
@@ -162,8 +163,22 @@ export function SettingsTab(p: SettingsTabProps) {
                   className={input} />
               </label>
               {(p.basket?.lentValueUsd ?? 0) > 0 && (
-                <div className="text-[11px] text-cyan/80">
-                  Currently lent: <span className="tabular-nums">${(p.basket?.lentValueUsd ?? 0).toFixed(2)}</span> · {(p.basket?.lendApy ?? 0).toFixed(2)}% APY
+                <div className="space-y-1">
+                  <div className="text-[11px] text-cyan/80">
+                    Currently lent: <span className="tabular-nums">${(p.basket?.lentValueUsd ?? 0).toFixed(2)}</span> · {(p.basket?.lendApy ?? 0).toFixed(2)}% APY
+                  </div>
+                  {(p.basket?.lendEarningsLifetimeUsd ?? 0) > 0 && (
+                    <div className="flex items-center justify-between text-[11px] text-good/90">
+                      <span>
+                        Earned: <span className="tabular-nums">${(p.basket?.lendEarningsLifetimeUsd ?? 0).toFixed(2)}</span> lifetime
+                        {(p.basket?.lendEarningsPeriodUsd ?? 0) > 0 && (
+                          <> · <span className="tabular-nums">+${(p.basket?.lendEarningsPeriodUsd ?? 0).toFixed(2)}</span>
+                          {p.basket?.lendEarningsBaselineAt ? ` since ${new Date(p.basket.lendEarningsBaselineAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : ""}</>
+                        )}
+                      </span>
+                      <button onClick={p.onResetLendEarnings} className="text-dim hover:text-cyan transition-colors">reset</button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

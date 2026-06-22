@@ -1028,6 +1028,7 @@ function Dashboard() {
                 onCreate={() => handleWalletCreate(false)}
                 basket={basket}
                 onSaveSettings={saveBasketSettings}
+                onResetLendEarnings={() => { fetch("/api/basket/reset-lend-earnings", { method: "POST" }); }}
                 telegram={telegram}
                 telegramToken={telegramToken}
                 setTelegramToken={setTelegramToken}

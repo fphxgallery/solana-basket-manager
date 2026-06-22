@@ -15,8 +15,9 @@ import { CONFIG } from "./config.js";
 
 export interface LendTokenInfo {
   decimals: number;
-  apyPct: number;     // annualized supply+rewards rate, percent (e.g. 6.93)
-  priceUsd: number;   // underlying asset USD price per whole token
+  apyPct: number;       // annualized supply+rewards rate, percent (e.g. 6.93)
+  priceUsd: number;     // underlying asset USD price per whole token
+  vaultAddress: string; // jlToken / position address (used to query earnings)
 }
 
 export interface LendPosition {
@@ -31,6 +32,7 @@ export interface LendOpResult {
 }
 
 interface VaultEntry {
+  address: string;   // jlToken / vault address
   assetAddress: string;
   decimals: number;
   totalRate: string; // bps as string, e.g. "693"
@@ -61,6 +63,8 @@ export interface LendingVenue {
   getTokenInfo(mint: string): Promise<LendTokenInfo | null>;
   /** Current lent position for owner in an underlying mint (zero if none). */
   getPosition(owner: PublicKey, mint: string): Promise<LendPosition>;
+  /** Cumulative lifetime earnings for owner in a vault, in underlying base units. */
+  getEarnings(owner: PublicKey, vaultAddress: string): Promise<bigint>;
   /** Build, sign, send and confirm a deposit of amountRaw underlying base units. */
   deposit(connection: Connection, keypair: Keypair, mint: string, amountRaw: bigint): Promise<LendOpResult>;
   /** Build, sign, send and confirm a withdraw of amountRaw underlying base units. */
@@ -111,7 +115,16 @@ export const jupiterLend: LendingVenue = {
       decimals: v.decimals,
       apyPct: (Number(v.totalRate) || 0) / 100, // bps → percent
       priceUsd: Number(v.asset?.price) || 0,
+      vaultAddress: v.address,
     };
+  },
+
+  async getEarnings(owner, vaultAddress) {
+    const res = await fetch(`${CONFIG.JUPITER_LEND_BASE_URL}/earnings?user=${owner.toBase58()}&positions=${vaultAddress}`);
+    if (!res.ok) throw new Error(`lend /earnings ${res.status}`);
+    const rows = (await res.json()) as Array<{ address: string; earnings: number | string }>;
+    const r = rows.find((x) => x.address === vaultAddress);
+    return r ? BigInt(Math.round(Number(r.earnings))) : 0n;
   },
 
   async getPosition(owner, mint) {

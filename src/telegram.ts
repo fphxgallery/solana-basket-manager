@@ -117,7 +117,7 @@ async function notifyRich(message: string): Promise<void> {
 export async function sendDailyReport(): Promise<void> {
   if (!config?.token || !config?.chatId) return;
 
-  const { holdings, totalValueSol, totalValueUsd, baselineTimestamp, pnlUsd, pnlPctUsd, hwmValueUsd, hwmCapturedAt, lentValueUsd, lendApy } = basketStore;
+  const { holdings, totalValueSol, totalValueUsd, baselineTimestamp, pnlUsd, pnlPctUsd, hwmValueUsd, hwmCapturedAt, lentValueUsd, lendApy, lendEarningsLifetimeUsd, lendEarningsPeriodUsd } = basketStore;
   const basketConfig = basketStore.config;
   const solUsd = await getSolUsd();
   const walletSol = store.walletBalanceSol;
@@ -135,6 +135,14 @@ export async function sendDailyReport(): Promise<void> {
     msg += `<p>${line}</p>`;
   } else if (solUsd > 0) {
     msg += `<p>💲 <i>SOL $${solUsd.toFixed(2)}</i></p>`;
+  }
+
+  if (basketConfig.lendEnabled && lentValueUsd > 0) {
+    msg += `<p>🌱 <b>Lent $${lentValueUsd.toFixed(2)}</b> <i>· ${lendApy.toFixed(2)}% APY</i></p>`;
+    if (lendEarningsLifetimeUsd > 0) {
+      const period = lendEarningsPeriodUsd > 0 ? ` · +$${lendEarningsPeriodUsd.toFixed(2)} this period` : "";
+      msg += `<p>🌱 <b>Earned $${lendEarningsLifetimeUsd.toFixed(2)}</b> <i>lifetime${period}</i></p>`;
+    }
   }
 
   if (basketConfig.lendEnabled && lentValueUsd > 0) {

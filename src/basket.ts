@@ -197,6 +197,8 @@ export async function refreshHoldings(
   const { lendEnabled, lendMint } = basketStore.config;
   let lentUi = 0;
   let lendApy = 0;
+  let lendPriceUsd = 0;
+  let lendEarningsLifetimeUi = 0;
   if (lendEnabled && mints.includes(lendMint)) {
     try {
       const [pos, info] = await Promise.all([
@@ -204,6 +206,11 @@ export async function refreshHoldings(
         jupiterLend.getTokenInfo(lendMint),
       ]);
       lendApy = info?.apyPct ?? 0;
+      lendPriceUsd = info?.priceUsd ?? 0;
+      if (info) {
+        const earningsRaw = await jupiterLend.getEarnings(walletPk, info.vaultAddress).catch(() => 0n);
+        lendEarningsLifetimeUi = Number(earningsRaw) / 10 ** info.decimals;
+      }
       if (pos.underlyingRaw > 0n) {
         lentUi = Number(pos.underlyingRaw) / 10 ** pos.decimals;
         const wb = balances[lendMint] ?? { uiAmount: 0, rawAmount: "0" };
@@ -338,6 +345,8 @@ export async function refreshHoldings(
     lentValueUsd: solUsd > 0 ? lentValueSol * solUsd : 0,
     lentBalanceUi: lentUi,
     lendApy,
+    earningsLifetimeUi: lendEarningsLifetimeUi,
+    priceUsd: lendPriceUsd,
   });
 
   basketStore.setHoldings(holdings, totalValueSol, totalValueUsd);

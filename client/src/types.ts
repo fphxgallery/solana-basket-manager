@@ -71,6 +71,9 @@ export interface BasketState {
   lentValueUsd: number;
   lentBalanceUi: number;
   lendApy: number;
+  lendEarningsLifetimeUsd: number;
+  lendEarningsPeriodUsd: number;
+  lendEarningsBaselineAt: number | null;
 }
 
 export interface ValuePoint {
