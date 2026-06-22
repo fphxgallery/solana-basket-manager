@@ -45,6 +45,7 @@ export interface BasketState {
     curvePoints: Array<[number, number]>;
     curveCap: number;
     minSwapUsd: number;
+    maxPriceImpactPct: number;
     dynamicWeightMint: string;
     reserveMint: string | null;
     reserveFloorPct: number;

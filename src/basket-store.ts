@@ -17,6 +17,7 @@ export interface BasketConfig {
   curvePoints: Array<[number, number]>; // [pnlPct, tokenWeightPct] pairs, ascending by pnlPct
   curveCap: number;               // dynamic token weight when pnlPct > last curve point, default 30
   minSwapUsd: number;             // skip rebalance swaps worth less than this in USD, default 5
+  maxPriceImpactPct: number;      // skip a rebalance swap when Jupiter quote price impact exceeds this %; 0 = disabled
   dynamicWeightMint: string;      // token that gets the dynamic profit-taking weight (default USDC)
   reserveMint: string | null;     // token with a hard floor weight; null = disabled
   reserveFloorPct: number;        // minimum weight % enforced for reserveMint
@@ -53,6 +54,7 @@ const DEFAULTS: BasketConfig = {
   curvePoints: [[-20, 0], [-10, 5], [0, 10], [10, 15], [15, 20], [20, 25]],
   curveCap: 30,
   minSwapUsd: 5,
+  maxPriceImpactPct: 2,
   dynamicWeightMint: USDC_MINT,
   reserveMint: null,
   reserveFloorPct: 0,

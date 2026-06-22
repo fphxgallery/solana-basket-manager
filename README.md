@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.3.7-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.3.8-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -134,6 +134,9 @@ sudo systemctl status basket-manager
 
 Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
 
+### v3.3.8
+- **Price-impact gate** — skip rebalance swaps whose Jupiter quote price impact exceeds the new `maxPriceImpactPct` Basket setting (default 2%, `0` = off); gated swaps are logged and noted in the Telegram report but kept out of the trade log
+
 ### v3.3.7
 - **Jupiter Lend read resilience** — retry-with-backoff (honoring `Retry-After`) on 429/5xx plus a 4-min per-endpoint cache with stale-on-error fallback, so the shared lite host's rate-limits and timeouts no longer surface as failed reads. Positions cache invalidated after deposit/withdraw
 
@@ -145,9 +148,6 @@ Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
 
 ### v3.3.4
 - **Per-token price history** logged to `data/token-history.json` each refresh — groundwork for offline rebalance-band backtesting (the aggregate value chart lacks per-mint prices). 90-day retention, forward-logging only
-
-### v3.3.3
-- **Lend earnings tracking** — realized Jupiter Lend yield (lifetime + resettable "this period") in Settings → Lending and the daily report, separate from the forward APY
 
 ## License
 

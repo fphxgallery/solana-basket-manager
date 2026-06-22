@@ -13,7 +13,7 @@ export interface SettingsTabProps {
   onCreate: () => void;
   // basket settings
   basket: BasketState | null;
-  onSaveSettings: (patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; minSwapUsd?: number; lendEnabled?: boolean; lendBufferPct?: number; lendBufferDriftMult?: number; lendMinDepositUsd?: number }) => void;
+  onSaveSettings: (patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; minSwapUsd?: number; maxPriceImpactPct?: number; lendEnabled?: boolean; lendBufferPct?: number; lendBufferDriftMult?: number; lendMinDepositUsd?: number }) => void;
   onResetLendEarnings: () => void;
   // telegram
   telegram: TelegramInfo | null;
@@ -105,6 +105,13 @@ export function SettingsTab(p: SettingsTabProps) {
               <input type="number" min="0" max="100" step="1"
                 defaultValue={p.basket?.config.minSwapUsd ?? 5}
                 onBlur={(e) => p.onSaveSettings({ minSwapUsd: parseFloat(e.target.value) })}
+                className={input} />
+            </label>
+            <label className="block">
+              <span className="text-[11px] text-dim block mb-1">Max price impact (%) · 0 = off</span>
+              <input type="number" min="0" max="50" step="0.5"
+                defaultValue={p.basket?.config.maxPriceImpactPct ?? 2}
+                onBlur={(e) => p.onSaveSettings({ maxPriceImpactPct: parseFloat(e.target.value) })}
                 className={input} />
             </label>
           </div>

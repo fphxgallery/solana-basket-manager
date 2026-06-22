@@ -135,7 +135,7 @@ router.put("/basket/tokens", (req: Request, res: Response) => {
 
 // Update basket settings (drift threshold, rebalance interval)
 router.patch("/basket/settings", (req: Request, res: Response) => {
-  const { driftThresholdPct, rebalanceIntervalHours, hwmEnabled, hwmHalfLifeDays, curvePoints, curveCap, minSwapUsd, dynamicWeightMint, reserveMint, reserveFloorPct, lendEnabled, lendMint, lendBufferPct, lendBufferDriftMult, lendMinDepositUsd } = req.body as {
+  const { driftThresholdPct, rebalanceIntervalHours, hwmEnabled, hwmHalfLifeDays, curvePoints, curveCap, minSwapUsd, maxPriceImpactPct, dynamicWeightMint, reserveMint, reserveFloorPct, lendEnabled, lendMint, lendBufferPct, lendBufferDriftMult, lendMinDepositUsd } = req.body as {
     driftThresholdPct?: number;
     rebalanceIntervalHours?: number;
     hwmEnabled?: boolean;
@@ -143,6 +143,7 @@ router.patch("/basket/settings", (req: Request, res: Response) => {
     curvePoints?: Array<[number, number]>;
     curveCap?: number;
     minSwapUsd?: number;
+    maxPriceImpactPct?: number;
     dynamicWeightMint?: string;
     reserveMint?: string | null;
     reserveFloorPct?: number;
@@ -213,6 +214,13 @@ router.patch("/basket/settings", (req: Request, res: Response) => {
       return;
     }
     patch.minSwapUsd = minSwapUsd;
+  }
+  if (maxPriceImpactPct != null) {
+    if (typeof maxPriceImpactPct !== "number" || maxPriceImpactPct < 0 || maxPriceImpactPct > 50) {
+      res.status(400).json({ error: "maxPriceImpactPct must be a number in [0, 50]" });
+      return;
+    }
+    patch.maxPriceImpactPct = maxPriceImpactPct;
   }
   if (dynamicWeightMint != null) {
     if (typeof dynamicWeightMint !== "string" || !dynamicWeightMint.trim()) {

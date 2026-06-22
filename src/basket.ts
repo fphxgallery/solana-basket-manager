@@ -499,7 +499,8 @@ interface PlannedSwap {
 interface SwapResult {
   label: string;
   sol: number;
-  status: "confirmed" | "failed";
+  status: "confirmed" | "failed" | "skipped";
+  impactPct?: number; // set when status === "skipped" by the price-impact gate
 }
 
 // Reserve SOL for gas fees across all buy swaps (priority fee + sig cost per swap)
@@ -589,12 +590,17 @@ export async function executeRebalance(
   basketStore.recordRebalance();
 
   if (results.length > 0) {
-    const anyFailed = results.some((r) => r.status === "failed");
-    const icon = anyFailed ? "⚠️" : "⚖️";
-    const lines = results.map((r) =>
+    const executed = results.filter((r) => r.status !== "skipped");
+    const gated = results.filter((r) => r.status === "skipped");
+    const anyFailed = executed.some((r) => r.status === "failed");
+    const icon = anyFailed || gated.length ? "⚠️" : "⚖️";
+    const lines = executed.map((r) =>
       `${r.status === "confirmed" ? "✅" : "❌"} ${r.label} — ${r.sol.toFixed(4)} SOL`,
     );
     if (lendWithdrawnUsd > 0) lines.push(`• withdrew $${lendWithdrawnUsd.toFixed(2)} from Jupiter Lend`);
+    for (const g of gated) {
+      lines.push(`• skipped ${g.label} (impact ${(g.impactPct ?? 0).toFixed(1)}% > ${basketStore.config.maxPriceImpactPct}% cap)`);
+    }
     notify(`${icon} <b>Rebalance complete</b>\n${lines.join("\n")}`).catch(() => {});
   }
 }
@@ -614,25 +620,10 @@ async function performSwap(
   const confirmed: SwapResult = { label: swapLabel, sol: swap.displaySol, status: "confirmed" };
 
   const tradeId = randomUUID();
-  const tradeRecord = {
-    id: tradeId,
-    timestamp: Date.now(),
-    profitSol: 0,
-    profitBps: 0,
-    route: `REBALANCE: ${swapLabel}`,
-    dexLabels: [] as string[],
-    bundleId: "",
-    status: "pending" as const,
-    inputSol: swap.displaySol,
-    outputSol: 0,
-    costBps: 0,
-  };
 
-  if (swap.rawAmount < 1_000n) return null; // skip dust — before addTrade to avoid phantom pending entries
+  if (swap.rawAmount < 1_000n) return null; // skip dust — before any trade record
 
   try {
-    store.addTrade(tradeRecord);
-
     // Stagger rebalance swaps — not latency-sensitive
     await new Promise((r) => setTimeout(r, 1000));
 
@@ -653,14 +644,39 @@ async function performSwap(
     }
     if (!qRes || !qRes.ok) {
       console.error("[basket] quote failed:", qRes ? await qRes.text() : "no response");
-      store.updateTradeStatus(tradeId, "failed");
       return failed;
     }
 
     const quote = (await qRes.json()) as JupiterQuote;
+
+    // ── Price-impact gate ──
+    // priceImpactPct is a fraction string (e.g. "0.0284" = 2.84%). Skip the swap when
+    // it exceeds the configured cap — a non-execution, so no trade record / chart marker.
+    const impactPct = (Number(quote.priceImpactPct) || 0) * 100;
+    const { maxPriceImpactPct } = basketStore.config;
+    if (maxPriceImpactPct > 0 && impactPct > maxPriceImpactPct) {
+      console.log(`[basket] gated ${swapLabel}: price impact ${impactPct.toFixed(2)}% > ${maxPriceImpactPct}% cap`);
+      return { label: swapLabel, sol: swap.displaySol, status: "skipped", impactPct };
+    }
+
     const outAmountSol = swap.outputMint === WSOL
       ? Number(BigInt(quote.outAmount)) / 1e9
       : swap.displaySol;
+
+    // Committing to execute — record the trade now (pending).
+    store.addTrade({
+      id: tradeId,
+      timestamp: Date.now(),
+      profitSol: 0,
+      profitBps: 0,
+      route: `REBALANCE: ${swapLabel}`,
+      dexLabels: [] as string[],
+      bundleId: "",
+      status: "pending" as const,
+      inputSol: swap.displaySol,
+      outputSol: 0,
+      costBps: 0,
+    });
 
     // Build swap tx via lite API (no key needed). With dynamic slippage on,
     // Jupiter recomputes the optimal slippage per route (capped at

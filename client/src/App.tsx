@@ -454,7 +454,7 @@ function Dashboard() {
     }
   }
 
-  async function saveBasketSettings(patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; hwmEnabled?: boolean; hwmHalfLifeDays?: number; minSwapUsd?: number; dynamicWeightMint?: string; reserveMint?: string | null; reserveFloorPct?: number; lendEnabled?: boolean; lendMint?: string; lendBufferPct?: number; lendBufferDriftMult?: number; lendMinDepositUsd?: number }) {
+  async function saveBasketSettings(patch: { driftThresholdPct?: number; rebalanceIntervalHours?: number; hwmEnabled?: boolean; hwmHalfLifeDays?: number; minSwapUsd?: number; maxPriceImpactPct?: number; dynamicWeightMint?: string; reserveMint?: string | null; reserveFloorPct?: number; lendEnabled?: boolean; lendMint?: string; lendBufferPct?: number; lendBufferDriftMult?: number; lendMinDepositUsd?: number }) {
     await fetch("/api/basket/settings", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
