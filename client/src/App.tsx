@@ -701,19 +701,37 @@ function Dashboard() {
                   </button>
                 </div>
               )}
-              {rightTab === "trades" && ((state?.trades.length ?? 0) + (state?.lendingEvents?.length ?? 0)) > 0 && (
-                <button
-                  onClick={clearLogs}
-                  title={logFilter === "lending" ? "Clear lending events" : logFilter === "rebalance" ? "Clear rebalance log" : "Clear all logs"}
-                  className={`flex items-center gap-1.5 text-[10.5px] rounded-md transition-colors flex-shrink-0 border ${
-                    clearArmed
-                      ? "text-bad bg-[#1a0d10] border-[#3a1418] hover:bg-[#231013]"
-                      : "text-muted hover:text-bad border-cardline hover:border-[#3a1418]"
-                  }`}
-                  style={{ padding: "5px 9px" }}
-                >
-                  <Trash2 style={{ width: 13, height: 13 }} /> {clearArmed ? "Confirm clear" : "Clear logs"}
-                </button>
+              {rightTab === "trades" && (
+                <div className="flex items-center gap-1.5 flex-shrink-0">
+                  {([["all", "All"], ["rebalance", "Rebalances"], ["lending", "Lending"]] as Array<[typeof logFilter, string]>).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => { setLogFilter(key); setTradePage(0); }}
+                      className={`text-[10.5px] rounded-md border transition-colors ${
+                        logFilter === key
+                          ? "text-cyan border-cyan-line bg-white/[0.03]"
+                          : "text-dim border-cardline hover:text-muted"
+                      }`}
+                      style={{ padding: "5px 9px" }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                  {((state?.trades.length ?? 0) + (state?.lendingEvents?.length ?? 0)) > 0 && (
+                    <button
+                      onClick={clearLogs}
+                      title={logFilter === "lending" ? "Clear lending events" : logFilter === "rebalance" ? "Clear rebalance log" : "Clear all logs"}
+                      className={`flex items-center gap-1.5 text-[10.5px] rounded-md transition-colors border ${
+                        clearArmed
+                          ? "text-bad bg-[#1a0d10] border-[#3a1418] hover:bg-[#231013]"
+                          : "text-muted hover:text-bad border-cardline hover:border-[#3a1418]"
+                      }`}
+                      style={{ padding: "5px 9px" }}
+                    >
+                      <Trash2 style={{ width: 13, height: 13 }} /> {clearArmed ? "Confirm clear" : "Clear logs"}
+                    </button>
+                  )}
+                </div>
               )}
             </div>
 
@@ -729,26 +747,8 @@ function Dashboard() {
               const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
               const page = Math.min(tradePage, totalPages - 1);
               const pageRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-              const filters: Array<[typeof logFilter, string]> = [["all", "All"], ["rebalance", "Rebalances"], ["lending", "Lending"]];
               return (
                 <>
-                  {/* Filter pills */}
-                  <div className="flex items-center gap-1.5 px-4 py-2.5 border-b border-divider">
-                    {filters.map(([key, label]) => (
-                      <button
-                        key={key}
-                        onClick={() => { setLogFilter(key); setTradePage(0); }}
-                        className={`text-[10.5px] rounded-md border transition-colors ${
-                          logFilter === key
-                            ? "text-cyan border-cyan-line bg-white/[0.03]"
-                            : "text-dim border-cardline hover:text-muted"
-                        }`}
-                        style={{ padding: "3px 9px" }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
                   {rows.length === 0 ? (
                     <div className="px-4 py-12 text-center text-dim text-sm">
                       {logFilter === "lending"

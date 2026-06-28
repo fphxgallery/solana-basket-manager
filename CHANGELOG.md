@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.4.1
+- **Logs tab polish** — the **All / Rebalances / Lending** filters moved out of their own in-panel row and up into the LOGS tab header, sitting left of the Clear logs button. Matches how BASKET keeps its actions (Rebalance / Edit basket) in the header, and reclaims a row of vertical space above the feed. Pills now match the header button sizing; behavior unchanged (filter still drives both the feed and which log Clear targets)
+
 ### v3.4.0
 - **Logs tab (was Rebalance Log)** — renamed and unified into a single feed covering rebalance swaps *and* Jupiter Lend activity, with **All / Rebalances / Lending** filter pills and a new icon. Lend deposits and withdrawals (incl. failures, and the withdraw-to-fund-a-sell context) now show as their own rows with a Solscan link and APY, instead of being console-only. Lending events are stored separately in `data/lending-log.json` and deliberately kept out of `trades.json` — so they never pollute rebalance cost/profit metrics or draw false markers on the value chart. The Clear button honors the active filter (clears rebalances, lending, or both). Backend: new `LendingEvent` store + `/api/lending/clear`, broadcast over SSE like trades
 
