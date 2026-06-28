@@ -1,28 +1,9 @@
 import { Line } from "react-chartjs-2";
 import type { ChartOptions, ChartData, Plugin } from "chart.js";
 import type { ValuePoint, TradeRecord } from "../types.ts";
-import { Card, CardLabel } from "../lib.tsx";
+import { Card, CardLabel, rebalanceEvents } from "../lib.tsx";
 
 type Win = "24h" | "7d" | "30d" | "90d";
-
-// Confirmed swaps from one rebalance run land within a few seconds of each
-// other. Collapse trades into events by clustering on a time gap so each run
-// draws a single marker instead of one per token swap.
-const CLUSTER_GAP_MS = 2 * 60_000;
-
-function rebalanceEvents(trades: TradeRecord[]): number[] {
-  const ts = trades
-    .filter((t) => t.status === "confirmed")
-    .map((t) => t.timestamp)
-    .sort((a, b) => a - b);
-  const events: number[] = [];
-  for (const t of ts) {
-    if (!events.length || t - events[events.length - 1] > CLUSTER_GAP_MS) {
-      events.push(t);
-    }
-  }
-  return events;
-}
 
 export function PortfolioChartCard({
   valueHistory,

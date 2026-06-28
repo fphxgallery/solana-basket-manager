@@ -12,6 +12,7 @@ import {
   Plus,
   RefreshCw,
   ScrollText,
+  Activity,
   Settings,
   Trash2,
   TrendingUp,
@@ -37,6 +38,7 @@ import { PortfolioChartCard } from "./components/PortfolioChartCard.tsx";
 import { Tabs, type TabKey } from "./components/Tabs.tsx";
 import { HoldingsTable } from "./components/HoldingsTable.tsx";
 import { SettingsTab } from "./components/SettingsTab.tsx";
+import { MetricsTab } from "./components/MetricsTab.tsx";
 
 ChartJS.register(
   ArcElement,
@@ -674,6 +676,7 @@ function Dashboard() {
                   { key: "basket", label: "BASKET", icon: Layers, count: basket?.config.tokens.length ?? 0 },
                   { key: "dynamic", label: "DYNAMIC WEIGHT", icon: TrendingUp },
                   { key: "trades", label: "LOGS", icon: ScrollText, count: (state?.trades.length ?? 0) + (state?.lendingEvents?.length ?? 0) },
+                  { key: "metrics", label: "METRICS", icon: Activity },
                   { key: "settings", label: "SETTINGS", icon: Settings },
                 ]}
               />
@@ -1099,6 +1102,9 @@ function Dashboard() {
                 </div>
               </div>
             )}
+
+            {/* Metrics tab — behavioral rebalance-quality report */}
+            {rightTab === "metrics" && <MetricsTab trades={state?.trades ?? []} />}
 
             {/* Settings tab */}
             {rightTab === "settings" && (

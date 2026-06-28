@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 
-export type TabKey = "trades" | "basket" | "dynamic" | "settings";
+export type TabKey = "trades" | "basket" | "dynamic" | "metrics" | "settings";
 
 export interface TabDef {
   key: TabKey;

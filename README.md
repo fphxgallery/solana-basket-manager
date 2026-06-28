@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.4.1-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.5.0-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -12,7 +12,7 @@ Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at targ
 - **Dynamic profit-taking** — the dynamic-weight token (default USDC) shifts target weight automatically based on basket PnL%, with an optional high-water-mark profit lock
 - **Jupiter Lend yield** — optionally park the idle USDC sleeve into Jupiter Lend Earn for yield, keeping a liquid buffer and withdrawing on demand to fund rebalances (off by default)
 - **PnL tracking** — SOL and USD baseline, 90-day portfolio chart
-- **Live dashboard** — React + Tailwind "Cyber grid" UI with SSE updates: 50/50 hero (merged P&L + HWM bar + wallet tile ‖ distribution donut + legend), full-width portfolio chart, holdings table with per-token allocation bars and `DYNAMIC`/`RESERVE` pills, rebalance log, and a consolidated Settings tab (wallet, basket settings, Telegram, daily report)
+- **Live dashboard** — React + Tailwind "Cyber grid" UI with SSE updates: 50/50 hero (merged P&L + HWM bar + wallet tile ‖ distribution donut + legend), full-width portfolio chart, holdings table with per-token allocation bars and `DYNAMIC`/`RESERVE` pills, Logs (rebalances + lending), a Metrics tab grading rebalance quality, and a consolidated Settings tab (wallet, basket settings, Telegram, daily report)
 - **Telegram** — start/stop + rebalance notifications and a scheduled daily report
 - **Token-protected API** — all endpoints require an auth token (cookie or bearer); dashboard has a sign-in screen
 - **Configurable at runtime** — basket weights, drift threshold, rebalance interval, lending — no restart needed
@@ -91,7 +91,7 @@ client/src/
   types.ts        — shared API/state types
   index.css       — Cyber-grid theme tokens (CSS vars) + animated background
   components/      — CyberBackground, AppHeader, HeroCard, PortfolioChartCard,
-                    Tabs, HoldingsTable, SettingsTab
+                    Tabs, HoldingsTable, MetricsTab, SettingsTab
 ```
 
 **Rebalance flow:** 3-min timer prices holdings via Jupiter → every 5 min, if any token's drift exceeds the threshold (or the interval has elapsed) → sell overweight tokens, then buy underweight with the proceeds (Jupiter lite swaps, sent direct).
@@ -134,6 +134,9 @@ sudo systemctl status basket-manager
 ## Changelog
 
 Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
+
+### v3.5.0
+- **Metrics tab** — new **METRICS** tab (between Logs and Settings) grading the rebalancing actually executed: avg price-impact cost, fill rate, rebalance cadence (per-week + mean/median/longest gap), turnover, SOL lost to cost drag with the 3 most expensive fills, token churn (round-tripped volume), and top routes by volume. Pure client-side over the existing trade log — no new endpoint or stored data
 
 ### v3.4.1
 - **Logs tab polish** — the All / Rebalances / Lending filters moved up into the tab header (left of Clear logs), matching the other tabs' action layout; reclaims a row of vertical space
