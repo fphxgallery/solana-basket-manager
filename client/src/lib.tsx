@@ -145,7 +145,7 @@ function median(xs: number[]): number {
 // element (a cyan-mono donut would be unreadable).
 export const CHART_COLORS = [
   "#c94040", "#d4704a", "#d49b4a", "#c9c44a", "#6abf69", "#4db6ac",
-  "#42a5c4", "#4a7dc4", "#6a5cc4", "#a05cc4", "#c45ca0",
+  "#42a5c4", "#4a7dc4", "#6a5cc4", "#a05cc4", "#c45ca0", "#d4506a",
 ];
 
 export function copyToClipboard(text: string): void {

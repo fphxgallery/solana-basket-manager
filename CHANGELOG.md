@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.5.2
+- **Distribution donut** — added a 12th palette color (`#d4506a`, rose) to `CHART_COLORS`, so a 12-token basket no longer wraps around and reuses the first slice's red. Slots between the existing magenta and red on the color wheel
+
 ### v3.5.1
 - **Metrics tab** — removed the explanatory footer caveat ("Grades the path taken…") for a cleaner one-screen layout. Cosmetic only
 
