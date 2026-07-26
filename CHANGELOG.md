@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.6.1
+- **Distribution legend** — raised the token legend so its first row is level with the DISTRIBUTION heading, instead of being vertically centered against the donut (which left it hanging low). The heading stays in place; it's now absolutely positioned so the legend can top-align while the donut remains vertically centered between them
+
 ### v3.6.0
 - **Denser holdings table** — cut row height ~40%. The per-token allocation mini-bar moved up inline with the symbol (and widened 96px → 130px, so small ~4–5% positions and their target tick are legible), the mint address dropped to a quieter second line, and the Jupiter Lend detail (`$X lent · Y% APY`) folded into that mint line instead of occupying its own third row. All cell padding tightened `py-2` → `py-1.5`. Same information, more rows on screen
 

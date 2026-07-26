@@ -183,16 +183,19 @@ export function HeroCard({
       <div className="hidden md:block w-px bg-divider my-5" />
       <div className="md:hidden h-px bg-divider mx-5" />
 
-      {/* RIGHT — distribution donut + legend */}
-      <div className="flex-1 p-5">
-        <CardLabel>DISTRIBUTION</CardLabel>
+      {/* RIGHT — distribution donut + legend. Label is absolutely placed so the
+          legend can top-align level with it while the donut stays centered. */}
+      <div className="flex-1 p-5 relative">
+        <CardLabel className="absolute top-5 left-5">DISTRIBUTION</CardLabel>
         {holdings.length ? (
-          <div className="mt-3 flex items-center justify-center gap-8">
-            <div className="relative flex-shrink-0" style={{ width: 196, height: 196 }}>
-              {donutData && <Doughnut data={donutData} options={donutOptions} />}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-2xl font-bold text-ink leading-none">{holdings.length}</span>
-                <span className="text-dim mt-0.5" style={{ fontSize: 10 }}>TOKENS</span>
+          <div className="flex items-stretch justify-center gap-8">
+            <div className="flex-1 flex items-center justify-center">
+              <div className="relative flex-shrink-0" style={{ width: 196, height: 196 }}>
+                {donutData && <Doughnut data={donutData} options={donutOptions} />}
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                  <span className="text-2xl font-bold text-ink leading-none">{holdings.length}</span>
+                  <span className="text-dim mt-0.5" style={{ fontSize: 10 }}>TOKENS</span>
+                </div>
               </div>
             </div>
             <div className="flex flex-col gap-1.5 min-w-0">
