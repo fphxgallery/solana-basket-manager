@@ -117,6 +117,85 @@ export function SettingsTab(p: SettingsTabProps) {
           </div>
         </Panel>
 
+      </div>
+
+      {/* RIGHT — Telegram + Daily Report, with Lending stacked beneath */}
+      <div className="space-y-4 w-full">
+        <div className="bg-card border border-cardline rounded-card p-4">
+        {/* TELEGRAM */}
+        <div className="flex items-center gap-1.5 text-[11px] tracking-wide text-muted mb-3">
+          <Send className="w-3.5 h-3.5" /> TELEGRAM
+        </div>
+        {p.telegram?.configured ? (
+          <>
+            <div className="flex items-center gap-1.5 mb-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-good" style={{ boxShadow: "0 0 7px var(--good)" }} />
+              <span className="text-[11px] text-good">Connected</span>
+            </div>
+            <div className="text-[11px] text-dim mb-3">Chat ID: {p.telegram.chatId}</div>
+            <div className="flex gap-2">
+              <button onClick={p.onTest} disabled={p.telegramTesting} className={ghostBtn}>
+                {p.telegramTesting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+                {p.telegramTestMsg ?? "Test"}
+              </button>
+              <button onClick={p.onDisconnect} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] text-bad bg-[#1a0d10] border border-[#3a1418] hover:bg-[#231013] transition-colors">
+                <X className="w-3 h-3" /> Disconnect
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <input type="password" placeholder="Bot token" value={p.telegramToken}
+              onChange={(e) => p.setTelegramToken(e.target.value)} className={`${input} mb-2`} />
+            <input type="text" placeholder="Chat ID" value={p.telegramChatId}
+              onChange={(e) => p.setTelegramChatId(e.target.value)} className={`${input} mb-2`} />
+            {p.telegramError && <p className="text-[11px] text-bad mb-2">{p.telegramError}</p>}
+            <button onClick={p.onSaveTelegram} className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] text-cyan bg-cyan-bg border border-cyan-line hover:bg-[#093341] transition-colors">
+              <Check className="w-3 h-3" /> Connect
+            </button>
+          </>
+        )}
+
+        <div className="my-4 h-px bg-divider" />
+
+        {/* DAILY REPORT */}
+        <div className="flex items-center gap-1.5 text-[11px] tracking-wide text-muted mb-3">
+          <Clock className="w-3.5 h-3.5" /> DAILY REPORT
+        </div>
+        {!p.telegram?.configured ? (
+          <p className="text-[11px] text-dim">Connect Telegram to enable daily reports.</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] text-dim">Scheduled</span>
+              <button
+                onClick={() => p.onSaveSchedule({ enabled: !p.reportEnabled })}
+                role="switch" aria-checked={p.reportEnabled} aria-label="Daily report schedule"
+                className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${p.reportEnabled ? "bg-cyan" : "bg-[#1a2a36]"}`}
+              >
+                <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${p.reportEnabled ? "left-[18px]" : "left-0.5"}`} />
+              </button>
+            </div>
+            {p.reportEnabled && (
+              <label className="block">
+                <span className="text-[11px] text-dim block mb-1">Send at (server local time)</span>
+                <div className="relative">
+                  <Clock className="w-3.5 h-3.5 text-dim absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input type="time" value={p.reportTime}
+                    onChange={(e) => p.setReportTime(e.target.value)}
+                    onBlur={(e) => p.onSaveSchedule({ time: e.target.value })}
+                    className={`${input} pl-7`} />
+                </div>
+              </label>
+            )}
+            <button onClick={p.onSendNow} disabled={p.reportSending} className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] text-muted hover:text-cyan bg-[#0a1019] border border-cardline hover:border-cyan-line transition-colors disabled:opacity-50">
+              {p.reportSending ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
+              {p.reportSendMsg ?? "Send Report Now"}
+            </button>
+          </div>
+        )}
+        </div>
+
         <Panel icon={Landmark} title="LENDING (JUPITER LEND)">
           <div className="flex items-center justify-between mb-3">
             <div>
@@ -191,82 +270,6 @@ export function SettingsTab(p: SettingsTabProps) {
             </div>
           )}
         </Panel>
-      </div>
-
-      {/* RIGHT — combined Telegram + Daily Report (stretches to match the left column) */}
-      <div className="bg-card border border-cardline rounded-card p-4 w-full">
-        {/* TELEGRAM */}
-        <div className="flex items-center gap-1.5 text-[11px] tracking-wide text-muted mb-3">
-          <Send className="w-3.5 h-3.5" /> TELEGRAM
-        </div>
-        {p.telegram?.configured ? (
-          <>
-            <div className="flex items-center gap-1.5 mb-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-good" style={{ boxShadow: "0 0 7px var(--good)" }} />
-              <span className="text-[11px] text-good">Connected</span>
-            </div>
-            <div className="text-[11px] text-dim mb-3">Chat ID: {p.telegram.chatId}</div>
-            <div className="flex gap-2">
-              <button onClick={p.onTest} disabled={p.telegramTesting} className={ghostBtn}>
-                {p.telegramTesting ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                {p.telegramTestMsg ?? "Test"}
-              </button>
-              <button onClick={p.onDisconnect} className="flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] text-bad bg-[#1a0d10] border border-[#3a1418] hover:bg-[#231013] transition-colors">
-                <X className="w-3 h-3" /> Disconnect
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <input type="password" placeholder="Bot token" value={p.telegramToken}
-              onChange={(e) => p.setTelegramToken(e.target.value)} className={`${input} mb-2`} />
-            <input type="text" placeholder="Chat ID" value={p.telegramChatId}
-              onChange={(e) => p.setTelegramChatId(e.target.value)} className={`${input} mb-2`} />
-            {p.telegramError && <p className="text-[11px] text-bad mb-2">{p.telegramError}</p>}
-            <button onClick={p.onSaveTelegram} className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] text-cyan bg-cyan-bg border border-cyan-line hover:bg-[#093341] transition-colors">
-              <Check className="w-3 h-3" /> Connect
-            </button>
-          </>
-        )}
-
-        <div className="my-4 h-px bg-divider" />
-
-        {/* DAILY REPORT */}
-        <div className="flex items-center gap-1.5 text-[11px] tracking-wide text-muted mb-3">
-          <Clock className="w-3.5 h-3.5" /> DAILY REPORT
-        </div>
-        {!p.telegram?.configured ? (
-          <p className="text-[11px] text-dim">Connect Telegram to enable daily reports.</p>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[11px] text-dim">Scheduled</span>
-              <button
-                onClick={() => p.onSaveSchedule({ enabled: !p.reportEnabled })}
-                role="switch" aria-checked={p.reportEnabled} aria-label="Daily report schedule"
-                className={`relative w-8 h-4 rounded-full transition-colors flex-shrink-0 ${p.reportEnabled ? "bg-cyan" : "bg-[#1a2a36]"}`}
-              >
-                <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${p.reportEnabled ? "left-[18px]" : "left-0.5"}`} />
-              </button>
-            </div>
-            {p.reportEnabled && (
-              <label className="block">
-                <span className="text-[11px] text-dim block mb-1">Send at (server local time)</span>
-                <div className="relative">
-                  <Clock className="w-3.5 h-3.5 text-dim absolute left-2 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input type="time" value={p.reportTime}
-                    onChange={(e) => p.setReportTime(e.target.value)}
-                    onBlur={(e) => p.onSaveSchedule({ time: e.target.value })}
-                    className={`${input} pl-7`} />
-                </div>
-              </label>
-            )}
-            <button onClick={p.onSendNow} disabled={p.reportSending} className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg text-[11px] text-muted hover:text-cyan bg-[#0a1019] border border-cardline hover:border-cyan-line transition-colors disabled:opacity-50">
-              {p.reportSending ? <RefreshCw className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-              {p.reportSendMsg ?? "Send Report Now"}
-            </button>
-          </div>
-        )}
       </div>
     </div>
   );

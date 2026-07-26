@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.6.3
+- **Settings layout** — moved the Lending (Jupiter Lend) card out of the left column and into the right column, stacked beneath Telegram / Daily Report. The left column previously carried three cards (Wallet, Basket settings, Lending) while the right had one tall card with empty space below; now both columns are roughly even height. No functional change
+
 ### v3.6.2
 - **Compact Logs rows** — collapsed each rebalance/lending entry from two lines to a single line: status badge, route (or lend action), tx link, SOL value swapped, cost % / APY, and time all inline. Cut row height ~50%. Page size raised 12 → 15 rows. The long value/cost labels were trimmed ("0.0554 SOL" rather than "0.0554 SOL value swapped") to fit one line; lend note truncates if long
 
