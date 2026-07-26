@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.6.0
+- **Denser holdings table** — cut row height ~40%. The per-token allocation mini-bar moved up inline with the symbol (and widened 96px → 130px, so small ~4–5% positions and their target tick are legible), the mint address dropped to a quieter second line, and the Jupiter Lend detail (`$X lent · Y% APY`) folded into that mint line instead of occupying its own third row. All cell padding tightened `py-2` → `py-1.5`. Same information, more rows on screen
+
 ### v3.5.2
 - **Distribution donut** — added a 12th palette color (`#d4506a`, rose) to `CHART_COLORS`, so a 12-token basket no longer wraps around and reuses the first slice's red. Slots between the existing magenta and red on the color wheel
 
