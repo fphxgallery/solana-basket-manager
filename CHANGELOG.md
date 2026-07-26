@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.6.2
+- **Compact Logs rows** — collapsed each rebalance/lending entry from two lines to a single line: status badge, route (or lend action), tx link, SOL value swapped, cost % / APY, and time all inline. Cut row height ~50%. Page size raised 12 → 15 rows. The long value/cost labels were trimmed ("0.0554 SOL" rather than "0.0554 SOL value swapped") to fit one line; lend note truncates if long
+
 ### v3.6.1
 - **Distribution legend** — raised the token legend so its first row is level with the DISTRIBUTION heading, instead of being vertically centered against the donut (which left it hanging low). The heading stays in place; it's now absolutely positioned so the legend can top-align while the donut remains vertically centered between them
 

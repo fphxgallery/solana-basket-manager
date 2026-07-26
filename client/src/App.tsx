@@ -746,7 +746,7 @@ function Dashboard() {
                 ...(logFilter !== "lending" ? trades.map((d) => ({ t: "trade" as const, ts: d.timestamp, data: d })) : []),
                 ...(logFilter !== "rebalance" ? lends.map((d) => ({ t: "lend" as const, ts: d.timestamp, data: d })) : []),
               ].sort((a, b) => b.ts - a.ts);
-              const PAGE_SIZE = 12;
+              const PAGE_SIZE = 15;
               const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
               const page = Math.min(tradePage, totalPages - 1);
               const pageRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -767,89 +767,70 @@ function Dashboard() {
                           if (row.t === "trade") {
                             const t = row.data;
                             return (
-                          <div key={t.id} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                            <div className="flex items-center gap-2 mb-1">
-                              <div className="flex items-center gap-2">
-                                <TradeStatusBadge status={t.status} />
-                                <span className="text-[11px] text-ink">{t.route}</span>
-                              </div>
-                              <div className="flex-1 text-left ml-3">
-                                {t.bundleId && (
-                                  <a
-                                    href={`https://solscan.io/tx/${t.bundleId}`}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="inline-flex items-center gap-1 text-[10px] text-dim hover:text-cyan transition-colors tabular-nums"
-                                    title={t.bundleId}
-                                  >
-                                    {truncate(t.bundleId, 12)}
-                                    <ExternalLink style={{ width: 9, height: 9 }} />
-                                  </a>
-                                )}
-                              </div>
-                              <span className="text-[10px] text-dim">{formatTime(t.timestamp)}</span>
-                            </div>
-                            {(t.inputSol > 0 || (t.costBps ?? 0) > 0 || (t.status === "confirmed" && t.profitSol !== 0)) && (
-                              <div className="flex items-center justify-between text-[10px]">
-                                <span className="text-dim">
-                                  {t.inputSol > 0 ? `${t.inputSol.toFixed(4)} SOL value swapped` : ""}
-                                </span>
-                                <div className="flex items-center gap-2 tabular-nums">
-                                  {t.status === "confirmed" && t.profitSol !== 0 && (
-                                    <span className={t.profitSol > 0 ? "text-good" : "text-bad"}>
-                                      {t.profitSol > 0 ? "+" : ""}{t.profitSol.toFixed(4)} SOL
-                                      {t.profitBps ? ` · ${t.profitBps > 0 ? "+" : ""}${t.profitBps} bps` : ""}
-                                    </span>
-                                  )}
-                                  {(t.costBps ?? 0) > 0 && (
-                                    <span
-                                      className={(t.costBps ?? 0) >= 100 ? "text-warn" : "text-dim"}
-                                      title="Execution cost — Jupiter route price impact"
-                                    >
-                                      {((t.costBps ?? 0) / 100).toFixed(2)}% cost
-                                    </span>
-                                  )}
-                                </div>
-                              </div>
+                          <div key={t.id} className="px-4 py-1.5 hover:bg-white/[0.02] transition-colors flex items-center gap-2 min-w-0">
+                            <TradeStatusBadge status={t.status} />
+                            <span className="text-[11px] text-ink whitespace-nowrap">{t.route}</span>
+                            {t.bundleId && (
+                              <a
+                                href={`https://solscan.io/tx/${t.bundleId}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 text-[10px] text-dim hover:text-cyan transition-colors tabular-nums flex-shrink-0"
+                                title={t.bundleId}
+                              >
+                                {truncate(t.bundleId, 6)}
+                                <ExternalLink style={{ width: 9, height: 9 }} />
+                              </a>
                             )}
+                            {t.inputSol > 0 && (
+                              <span className="text-[10px] text-dim tabular-nums whitespace-nowrap">· {t.inputSol.toFixed(4)} SOL</span>
+                            )}
+                            {t.status === "confirmed" && t.profitSol !== 0 && (
+                              <span className={`text-[10px] tabular-nums whitespace-nowrap ${t.profitSol > 0 ? "text-good" : "text-bad"}`}>
+                                · {t.profitSol > 0 ? "+" : ""}{t.profitSol.toFixed(4)} SOL{t.profitBps ? ` ${t.profitBps > 0 ? "+" : ""}${t.profitBps}bps` : ""}
+                              </span>
+                            )}
+                            {(t.costBps ?? 0) > 0 && (
+                              <span
+                                className={`text-[10px] tabular-nums whitespace-nowrap ${(t.costBps ?? 0) >= 100 ? "text-warn" : "text-dim"}`}
+                                title="Execution cost — Jupiter route price impact"
+                              >
+                                · {((t.costBps ?? 0) / 100).toFixed(2)}%
+                              </span>
+                            )}
+                            <span className="flex-1" />
+                            <span className="text-[10px] text-dim whitespace-nowrap flex-shrink-0">{formatTime(t.timestamp)}</span>
                           </div>
                             );
                           }
                           const ev = row.data;
                           return (
-                            <div key={ev.id} className="px-4 py-3 hover:bg-white/[0.02] transition-colors">
-                              <div className="flex items-center gap-2 mb-1">
-                                <div className="flex items-center gap-2">
-                                  <TradeStatusBadge status={ev.status} />
-                                  <Landmark style={{ width: 12, height: 12 }} className="text-cyan flex-shrink-0" />
-                                  <span className="text-[11px] text-ink">
-                                    {ev.kind === "deposit" ? "Parked" : "Withdrew"} ${ev.amountUsd.toFixed(2)} {ev.kind === "deposit" ? "to" : "from"} Jupiter Lend
-                                  </span>
-                                </div>
-                                <div className="flex-1 text-left ml-3">
-                                  {ev.sig && (
-                                    <a
-                                      href={`https://solscan.io/tx/${ev.sig}`}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="inline-flex items-center gap-1 text-[10px] text-dim hover:text-cyan transition-colors tabular-nums"
-                                      title={ev.sig}
-                                    >
-                                      {truncate(ev.sig, 12)}
-                                      <ExternalLink style={{ width: 9, height: 9 }} />
-                                    </a>
-                                  )}
-                                </div>
-                                <span className="text-[10px] text-dim">{formatTime(ev.timestamp)}</span>
-                              </div>
-                              {(ev.apyPct != null || ev.note) && (
-                                <div className="flex items-center justify-between text-[10px]">
-                                  <span className="text-dim">{ev.note ?? ""}</span>
-                                  {ev.apyPct != null && (
-                                    <span className="text-cyan tabular-nums">{ev.apyPct.toFixed(2)}% APY</span>
-                                  )}
-                                </div>
+                            <div key={ev.id} className="px-4 py-1.5 hover:bg-white/[0.02] transition-colors flex items-center gap-2 min-w-0">
+                              <TradeStatusBadge status={ev.status} />
+                              <Landmark style={{ width: 12, height: 12 }} className="text-cyan flex-shrink-0" />
+                              <span className="text-[11px] text-ink whitespace-nowrap">
+                                {ev.kind === "deposit" ? "Parked" : "Withdrew"} ${ev.amountUsd.toFixed(2)} {ev.kind === "deposit" ? "to" : "from"} Jupiter Lend
+                              </span>
+                              {ev.sig && (
+                                <a
+                                  href={`https://solscan.io/tx/${ev.sig}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 text-[10px] text-dim hover:text-cyan transition-colors tabular-nums flex-shrink-0"
+                                  title={ev.sig}
+                                >
+                                  {truncate(ev.sig, 6)}
+                                  <ExternalLink style={{ width: 9, height: 9 }} />
+                                </a>
                               )}
+                              {ev.note && (
+                                <span className="text-[10px] text-dim truncate">· {ev.note}</span>
+                              )}
+                              {ev.apyPct != null && (
+                                <span className="text-[10px] text-cyan tabular-nums whitespace-nowrap">· {ev.apyPct.toFixed(2)}% APY</span>
+                              )}
+                              <span className="flex-1" />
+                              <span className="text-[10px] text-dim whitespace-nowrap flex-shrink-0">{formatTime(ev.timestamp)}</span>
                             </div>
                           );
                         })}
