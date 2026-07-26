@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.5.1
+- **Metrics tab** — removed the explanatory footer caveat ("Grades the path taken…") for a cleaner one-screen layout. Cosmetic only
+
 ### v3.5.0
 - **Metrics tab** — new **METRICS** tab sitting between Logs and Settings: a behavioral rebalance-quality report that grades the rebalancing actually executed, not a counterfactual band sweep. Leads with cost (the fresh `costBps` data): top tiles for **avg cost** (mean price impact %, amber ≥1%), **fill rate** (confirmed vs failed, amber <90% — fails burn priority fees), **rebalances** (event count + per week), and **turnover** (Σ SOL swapped). A *Cost drag* section totals SOL lost to price impact and lists the 3 most expensive fills (which thin-pool tokens bleed); a *Behavior* section shows cadence (mean/median/longest gap, span), token **churn** (SOL round-tripped — sold then re-bought), and top routes by volume. Entirely client-side over the existing in-memory trade log — no new endpoint, no stored data. The `rebalanceEvents` clustering helper was lifted out of `PortfolioChartCard` into `lib.tsx` and is now shared with the new pure `analyzeTrades()`. Metrics cover priced swaps only (pre-v3.2.0 fills lack impact data) over the recent trade window (last 100)
 

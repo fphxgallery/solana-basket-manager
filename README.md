@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.5.0-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.5.1-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -134,6 +134,9 @@ sudo systemctl status basket-manager
 ## Changelog
 
 Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
+
+### v3.5.1
+- **Metrics tab** — removed the explanatory footer note for a cleaner one-screen layout
 
 ### v3.5.0
 - **Metrics tab** — new **METRICS** tab (between Logs and Settings) grading the rebalancing actually executed: avg price-impact cost, fill rate, rebalance cadence (per-week + mean/median/longest gap), turnover, SOL lost to cost drag with the 3 most expensive fills, token churn (round-tripped volume), and top routes by volume. Pure client-side over the existing trade log — no new endpoint or stored data

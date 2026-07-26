@@ -112,11 +112,6 @@ export function MetricsTab({ trades }: { trades: TradeRecord[] }) {
           </div>
         )}
       </Section>
-
-      <div className="text-[10px] text-dim leading-relaxed">
-        Grades the path taken, not a better band. Cost metrics cover priced swaps only (pre-v3.2.0 fills lack
-        impact data); the trade log keeps a recent window (last 100), so totals are over that window.
-      </div>
     </div>
   );
 }
