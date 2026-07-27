@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.7.1
+- **Portfolio hero stat strip** — the v3.7.0 hero redesign left a large empty band in the middle; filled it with a four-tile stat strip surfacing metrics not shown elsewhere on the main view: value in SOL, SOL-denominated P&L (green/red), the Jupiter Lend position (lent $ · APY, or "—" when lending is off/empty), and token count
+
 ### v3.7.0
 - **Portfolio hero redesign** — reworked the left hero card. The wallet balance moved up beside the total value (label + SOL + truncated address + copy, right-aligned) instead of a pinned bottom tile, and the two HWM meters (ATH ratio, peak decay) now sit as two half-width bars in one row rather than stacked full-width. Same data, tighter and more balanced against the distribution donut
 

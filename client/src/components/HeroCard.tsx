@@ -127,6 +127,32 @@ export function HeroCard({
           </div>
         </div>
 
+        {/* secondary stats — SOL value, SOL P&L, lend position, token count */}
+        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2">
+            <div className="text-[9px] tracking-wide text-muted">IN SOL</div>
+            <div className="text-sm text-ink tabular-nums mt-0.5">{basket ? `${basket.totalValueSol.toFixed(2)} SOL` : "—"}</div>
+          </div>
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2">
+            <div className="text-[9px] tracking-wide text-muted">P&amp;L (SOL)</div>
+            <div className={`text-sm tabular-nums mt-0.5 ${(basket?.pnlSol ?? 0) >= 0 ? "text-good" : "text-bad"}`}>
+              {basket?.pnlSol != null ? `${basket.pnlSol >= 0 ? "+" : ""}${basket.pnlSol.toFixed(2)}` : "—"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2">
+            <div className="text-[9px] tracking-wide text-muted">LENT · APY</div>
+            <div className="text-sm text-ink tabular-nums mt-0.5">
+              {basket?.config.lendEnabled && (basket?.lentValueUsd ?? 0) > 0
+                ? `$${basket.lentValueUsd.toFixed(0)} · ${(basket.lendApy ?? 0).toFixed(1)}%`
+                : "—"}
+            </div>
+          </div>
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2">
+            <div className="text-[9px] tracking-wide text-muted">TOKENS</div>
+            <div className="text-sm text-ink tabular-nums mt-0.5">{holdings.length || "—"}</div>
+          </div>
+        </div>
+
         {/* HWM meters — ATH ratio + peak decay, side by side, anchored to the bottom */}
         {(ratio != null || decayFrac != null) && (
           <div className="mt-auto pt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
