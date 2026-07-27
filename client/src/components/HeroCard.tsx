@@ -99,23 +99,23 @@ export function HeroCard({
         {/* value + wallet balance, side by side */}
         <div className="mt-3 flex items-end justify-between gap-4">
           <div>
-            <div className="text-[30px] leading-none font-bold text-ink">
+            <div className="text-[32px] leading-none font-bold text-ink">
               {totalUsd != null ? `$${totalUsd.toFixed(0)}` : "—"}
             </div>
             {basket?.pnlUsd != null ? (
-              <div className={`mt-2 text-sm font-semibold ${pnlUp ? "text-good" : "text-bad"}`}>
+              <div className={`mt-2.5 text-base font-semibold ${pnlUp ? "text-good" : "text-bad"}`}>
                 {pnlUp ? "+" : "-"}${Math.abs(basket.pnlUsd).toFixed(2)}
                 {basket.pnlPctUsd != null && (
                   <span className="ml-1.5">({basket.pnlPctUsd >= 0 ? "+" : ""}{basket.pnlPctUsd.toFixed(2)}%)</span>
                 )}
               </div>
             ) : (
-              <div className="mt-2 text-sm text-dim">Collecting…</div>
+              <div className="mt-2.5 text-base text-dim">Collecting…</div>
             )}
           </div>
           <div className="text-right flex-shrink-0">
             <div className="text-[10px] tracking-wide text-muted">WALLET BALANCE</div>
-            <div className="text-lg text-ink tabular-nums leading-tight">
+            <div className="text-xl text-ink tabular-nums leading-tight">
               {walletBalanceSol != null ? `${formatSol(walletBalanceSol)} SOL` : "—"}
             </div>
             {walletPublicKey && (
@@ -127,38 +127,39 @@ export function HeroCard({
           </div>
         </div>
 
-        {/* secondary stats — SOL value, SOL P&L, lend position, token count */}
-        <div className="mt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2">
-            <div className="text-[9px] tracking-wide text-muted">IN SOL</div>
-            <div className="text-sm text-ink tabular-nums mt-0.5">{basket ? `${basket.totalValueSol.toFixed(2)} SOL` : "—"}</div>
+        {/* secondary stats — SOL value, SOL P&L, lend position, token count. Anchored
+            near the bottom (empty space rises to the top), just above the meters. */}
+        <div className="mt-auto pt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5">
+            <div className="text-[11px] tracking-wide text-muted">IN SOL</div>
+            <div className="text-[19px] text-ink tabular-nums mt-1">{basket ? `${basket.totalValueSol.toFixed(2)} SOL` : "—"}</div>
           </div>
-          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2">
-            <div className="text-[9px] tracking-wide text-muted">P&amp;L (SOL)</div>
-            <div className={`text-sm tabular-nums mt-0.5 ${(basket?.pnlSol ?? 0) >= 0 ? "text-good" : "text-bad"}`}>
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5">
+            <div className="text-[11px] tracking-wide text-muted">P&amp;L (SOL)</div>
+            <div className={`text-[19px] tabular-nums mt-1 ${(basket?.pnlSol ?? 0) >= 0 ? "text-good" : "text-bad"}`}>
               {basket?.pnlSol != null ? `${basket.pnlSol >= 0 ? "+" : ""}${basket.pnlSol.toFixed(2)}` : "—"}
             </div>
           </div>
-          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2">
-            <div className="text-[9px] tracking-wide text-muted">LENT · APY</div>
-            <div className="text-sm text-ink tabular-nums mt-0.5">
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5">
+            <div className="text-[11px] tracking-wide text-muted">LENT · APY</div>
+            <div className="text-[19px] text-ink tabular-nums mt-1">
               {basket?.config.lendEnabled && (basket?.lentValueUsd ?? 0) > 0
                 ? `$${basket.lentValueUsd.toFixed(0)} · ${(basket.lendApy ?? 0).toFixed(1)}%`
                 : "—"}
             </div>
           </div>
-          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2">
-            <div className="text-[9px] tracking-wide text-muted">TOKENS</div>
-            <div className="text-sm text-ink tabular-nums mt-0.5">{holdings.length || "—"}</div>
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5">
+            <div className="text-[11px] tracking-wide text-muted">TOKENS</div>
+            <div className="text-[19px] text-ink tabular-nums mt-1">{holdings.length || "—"}</div>
           </div>
         </div>
 
-        {/* HWM meters — ATH ratio + peak decay, side by side, anchored to the bottom */}
+        {/* HWM meters — ATH ratio + peak decay, side by side, below the stat tiles */}
         {(ratio != null || decayFrac != null) && (
-          <div className="mt-auto pt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
             {ratio != null && (
               <div>
-                <div className="flex items-center justify-between text-[10px] text-dim mb-1">
+                <div className="flex items-center justify-between text-xs text-dim mb-1.5">
                   <span>{peakUsd != null ? `ATH $${peakUsd.toFixed(2)}` : ""}</span>
                   <span>{(ratio * 100).toFixed(1)}%</span>
                 </div>
@@ -178,7 +179,7 @@ export function HeroCard({
             )}
             {decayFrac != null && (
               <div>
-                <div className="flex items-center justify-between text-[10px] text-dim mb-1">
+                <div className="flex items-center justify-between text-xs text-dim mb-1.5">
                   <span>PEAK DECAY</span>
                   <span className="text-warn">{decayLabel}</span>
                 </div>

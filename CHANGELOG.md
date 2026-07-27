@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.7.2
+- **Portfolio hero polish** — moved the four stat tiles down to sit just above the ATH / peak-decay meters (the empty gap now rises to the top of the card, under the value row), and bumped type up a step across the card: tile values 14 → 19px, total 30 → 32px, wallet balance 18 → 20px, P&L line and meter labels larger too
+
 ### v3.7.1
 - **Portfolio hero stat strip** — the v3.7.0 hero redesign left a large empty band in the middle; filled it with a four-tile stat strip surfacing metrics not shown elsewhere on the main view: value in SOL, SOL-denominated P&L (green/red), the Jupiter Lend position (lent $ · APY, or "—" when lending is off/empty), and token count
 
