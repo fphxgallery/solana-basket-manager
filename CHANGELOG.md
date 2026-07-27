@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.8.0
+- **Portfolio hero — list layout** — reworked the hero away from the boxed stat tiles (which left the card feeling empty/blocky) into a two-column layout: a large 40px total value with USD P&L ($ over %) on the left, and a right-aligned stat list — wallet balance, value in SOL, SOL-denominated P&L, lent · APY, and SOL price — with the truncated wallet address + copy under a hairline. The ATH / peak-decay meters stay pinned to the bottom. Token count was dropped in favor of SOL price (which explains the USD-vs-SOL P&L divergence)
+
 ### v3.7.3
 - **Hero stat tiles** — bottom-aligned the tile values (each tile is now a flex column with the value pushed to the bottom, so all four line up) and dropped their size 19 → 16px with `whitespace-nowrap`, fixing the LENT · APY tile wrapping onto two lines
 

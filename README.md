@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.7.3-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.8.0-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -134,6 +134,9 @@ sudo systemctl status basket-manager
 ## Changelog
 
 Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
+
+### v3.8.0
+- **Portfolio hero — list layout** — replaced the boxed stat tiles with a two-column layout: a large total value + P&L on the left, and a compact stat list on the right (wallet, in SOL, SOL P&L, lent · APY, SOL price) with the wallet address + copy beneath. Meters stay pinned at the bottom
 
 ### v3.7.3
 - **Hero stat tiles** — values are bottom-aligned across the four tiles and sized down slightly (19 → 16px) with no-wrap, so the LENT · APY tile fits on one line
