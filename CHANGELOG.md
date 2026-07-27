@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.7.3
+- **Hero stat tiles** — bottom-aligned the tile values (each tile is now a flex column with the value pushed to the bottom, so all four line up) and dropped their size 19 → 16px with `whitespace-nowrap`, fixing the LENT · APY tile wrapping onto two lines
+
 ### v3.7.2
 - **Portfolio hero polish** — moved the four stat tiles down to sit just above the ATH / peak-decay meters (the empty gap now rises to the top of the card, under the value row), and bumped type up a step across the card: tile values 14 → 19px, total 30 → 32px, wallet balance 18 → 20px, P&L line and meter labels larger too
 

@@ -130,27 +130,27 @@ export function HeroCard({
         {/* secondary stats — SOL value, SOL P&L, lend position, token count. Anchored
             near the bottom (empty space rises to the top), just above the meters. */}
         <div className="mt-auto pt-5 grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5">
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5 flex flex-col">
             <div className="text-[11px] tracking-wide text-muted">IN SOL</div>
-            <div className="text-[19px] text-ink tabular-nums mt-1">{basket ? `${basket.totalValueSol.toFixed(2)} SOL` : "—"}</div>
+            <div className="text-[16px] text-ink tabular-nums mt-auto pt-2 whitespace-nowrap">{basket ? `${basket.totalValueSol.toFixed(2)} SOL` : "—"}</div>
           </div>
-          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5">
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5 flex flex-col">
             <div className="text-[11px] tracking-wide text-muted">P&amp;L (SOL)</div>
-            <div className={`text-[19px] tabular-nums mt-1 ${(basket?.pnlSol ?? 0) >= 0 ? "text-good" : "text-bad"}`}>
+            <div className={`text-[16px] tabular-nums mt-auto pt-2 whitespace-nowrap ${(basket?.pnlSol ?? 0) >= 0 ? "text-good" : "text-bad"}`}>
               {basket?.pnlSol != null ? `${basket.pnlSol >= 0 ? "+" : ""}${basket.pnlSol.toFixed(2)}` : "—"}
             </div>
           </div>
-          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5">
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5 flex flex-col">
             <div className="text-[11px] tracking-wide text-muted">LENT · APY</div>
-            <div className="text-[19px] text-ink tabular-nums mt-1">
+            <div className="text-[16px] text-ink tabular-nums mt-auto pt-2 whitespace-nowrap">
               {basket?.config.lendEnabled && (basket?.lentValueUsd ?? 0) > 0
                 ? `$${basket.lentValueUsd.toFixed(0)} · ${(basket.lendApy ?? 0).toFixed(1)}%`
                 : "—"}
             </div>
           </div>
-          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5">
+          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5 flex flex-col">
             <div className="text-[11px] tracking-wide text-muted">TOKENS</div>
-            <div className="text-[19px] text-ink tabular-nums mt-1">{holdings.length || "—"}</div>
+            <div className="text-[16px] text-ink tabular-nums mt-auto pt-2 whitespace-nowrap">{holdings.length || "—"}</div>
           </div>
         </div>
 
