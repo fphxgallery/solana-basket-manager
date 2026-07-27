@@ -96,87 +96,82 @@ export function HeroCard({
           )}
         </div>
 
-        <div className="mt-2 text-[30px] leading-none font-bold text-ink">
-          {totalUsd != null ? `$${totalUsd.toFixed(0)}` : "—"}
-        </div>
-
-        {basket?.pnlUsd != null ? (
-          <div className={`mt-1.5 text-sm font-semibold ${pnlUp ? "text-good" : "text-bad"}`}>
-            {pnlUp ? "+" : "-"}${Math.abs(basket.pnlUsd).toFixed(2)}
-            {basket.pnlPctUsd != null && (
-              <span className="ml-1.5">({basket.pnlPctUsd >= 0 ? "+" : ""}{basket.pnlPctUsd.toFixed(2)}%)</span>
+        {/* value + wallet balance, side by side */}
+        <div className="mt-3 flex items-end justify-between gap-4">
+          <div>
+            <div className="text-[30px] leading-none font-bold text-ink">
+              {totalUsd != null ? `$${totalUsd.toFixed(0)}` : "—"}
+            </div>
+            {basket?.pnlUsd != null ? (
+              <div className={`mt-2 text-sm font-semibold ${pnlUp ? "text-good" : "text-bad"}`}>
+                {pnlUp ? "+" : "-"}${Math.abs(basket.pnlUsd).toFixed(2)}
+                {basket.pnlPctUsd != null && (
+                  <span className="ml-1.5">({basket.pnlPctUsd >= 0 ? "+" : ""}{basket.pnlPctUsd.toFixed(2)}%)</span>
+                )}
+              </div>
+            ) : (
+              <div className="mt-2 text-sm text-dim">Collecting…</div>
             )}
           </div>
-        ) : (
-          <div className="mt-1.5 text-sm text-dim">Collecting…</div>
-        )}
-
-        {/* HWM current ÷ peak bar */}
-        {ratio != null && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-[10px] text-dim mb-1">
-              <span>{peakUsd != null ? `All Time High $${peakUsd.toFixed(2)}` : ""}</span>
-              <span>{(ratio * 100).toFixed(1)}% of ATH</span>
-            </div>
-            <div className="relative h-1.5 rounded-full bg-[#0e1c28] overflow-hidden">
-              <div
-                className="absolute inset-y-0 left-0 rounded-full"
-                style={{
-                  width: `${Math.min(ratio, 1) * 100}%`,
-                  backgroundImage: "linear-gradient(90deg, #f87171, #fbbf24 55%, #34d399)",
-                  backgroundSize: `${100 / Math.max(Math.min(ratio, 1) * 100, 0.01) * 100}% 100%`,
-                  backgroundRepeat: "no-repeat",
-                }}
-              />
-              {/* peak tick */}
-              <div className="absolute inset-y-0 right-0 w-px bg-cyan/70" />
-            </div>
-          </div>
-        )}
-
-        {/* HWM decay progress bar */}
-        {decayFrac != null && (
-          <div className="mt-4">
-            <div className="flex items-center justify-between text-[10px] text-dim mb-1">
-              <span>PEAK DECAY</span>
-              <span className="text-warn">{decayLabel}</span>
-            </div>
-            <div className="relative h-1.5 rounded-full bg-[#0e1c28] overflow-hidden">
-              <div
-                className="absolute inset-y-0 left-0 rounded-full"
-                style={{
-                  width: `${decayFrac * 100}%`,
-                  backgroundImage: "linear-gradient(90deg, #34d399, #fbbf24 55%, #f87171)",
-                  backgroundSize: `${100 / Math.max(decayFrac * 100, 0.01) * 100}% 100%`,
-                  backgroundRepeat: "no-repeat",
-                }}
-              />
-              {/* half-life marker */}
-              <div className="absolute inset-y-0 right-0 w-px bg-warn/60" />
-            </div>
-          </div>
-        )}
-
-        {/* wallet balance tile — pinned bottom */}
-        <div className="mt-auto pt-4">
-          <div className="rounded-lg border border-cardline bg-[#0a1019] px-3 py-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] tracking-wide text-muted">WALLET BALANCE</span>
-              <span className="text-sm text-ink">
-                {walletBalanceSol != null ? `${formatSol(walletBalanceSol)} SOL` : "—"}
-              </span>
+          <div className="text-right flex-shrink-0">
+            <div className="text-[10px] tracking-wide text-muted">WALLET BALANCE</div>
+            <div className="text-lg text-ink tabular-nums leading-tight">
+              {walletBalanceSol != null ? `${formatSol(walletBalanceSol)} SOL` : "—"}
             </div>
             {walletPublicKey && (
-              <>
-                <div className="my-2 h-px bg-divider" />
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] text-dim">{truncate(walletPublicKey, 10)}</span>
-                  <CopyButton text={walletPublicKey} />
-                </div>
-              </>
+              <div className="flex items-center justify-end gap-2 mt-0.5">
+                <span className="text-[10px] text-dim">{truncate(walletPublicKey, 6)}</span>
+                <CopyButton text={walletPublicKey} />
+              </div>
             )}
           </div>
         </div>
+
+        {/* HWM meters — ATH ratio + peak decay, side by side, anchored to the bottom */}
+        {(ratio != null || decayFrac != null) && (
+          <div className="mt-auto pt-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {ratio != null && (
+              <div>
+                <div className="flex items-center justify-between text-[10px] text-dim mb-1">
+                  <span>{peakUsd != null ? `ATH $${peakUsd.toFixed(2)}` : ""}</span>
+                  <span>{(ratio * 100).toFixed(1)}%</span>
+                </div>
+                <div className="relative h-1.5 rounded-full bg-[#0e1c28] overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{
+                      width: `${Math.min(ratio, 1) * 100}%`,
+                      backgroundImage: "linear-gradient(90deg, #f87171, #fbbf24 55%, #34d399)",
+                      backgroundSize: `${100 / Math.max(Math.min(ratio, 1) * 100, 0.01) * 100}% 100%`,
+                      backgroundRepeat: "no-repeat",
+                    }}
+                  />
+                  <div className="absolute inset-y-0 right-0 w-px bg-cyan/70" />
+                </div>
+              </div>
+            )}
+            {decayFrac != null && (
+              <div>
+                <div className="flex items-center justify-between text-[10px] text-dim mb-1">
+                  <span>PEAK DECAY</span>
+                  <span className="text-warn">{decayLabel}</span>
+                </div>
+                <div className="relative h-1.5 rounded-full bg-[#0e1c28] overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-full"
+                    style={{
+                      width: `${decayFrac * 100}%`,
+                      backgroundImage: "linear-gradient(90deg, #34d399, #fbbf24 55%, #f87171)",
+                      backgroundSize: `${100 / Math.max(decayFrac * 100, 0.01) * 100}% 100%`,
+                      backgroundRepeat: "no-repeat",
+                    }}
+                  />
+                  <div className="absolute inset-y-0 right-0 w-px bg-warn/60" />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* divider */}

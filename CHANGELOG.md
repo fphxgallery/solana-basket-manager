@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.7.0
+- **Portfolio hero redesign** — reworked the left hero card. The wallet balance moved up beside the total value (label + SOL + truncated address + copy, right-aligned) instead of a pinned bottom tile, and the two HWM meters (ATH ratio, peak decay) now sit as two half-width bars in one row rather than stacked full-width. Same data, tighter and more balanced against the distribution donut
+
 ### v3.6.3
 - **Settings layout** — moved the Lending (Jupiter Lend) card out of the left column and into the right column, stacked beneath Telegram / Daily Report. The left column previously carried three cards (Wallet, Basket settings, Lending) while the right had one tall card with empty space below; now both columns are roughly even height. No functional change
 
