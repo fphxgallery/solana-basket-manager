@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.8.1
+- **Fix: chart frozen after a large deposit/withdrawal.** `recordSnapshot()` rejects any value >10× (or <1/10×) the last point as a bad CoinGecko quote. A big real top-up (~$450 → $6257, ~14×) tripped this on every cycle, so the value chart stuck at the pre-top-up level while the hero showed the new balance. The guard now holds an out-of-band reading and accepts it once 3 consistent readings (within 15% of each other) confirm a sustained level change — real deposits/withdrawals go through after ~3 cycles, transient bad quotes (which revert immediately) are still dropped
+
 ### v3.8.0
 - **Portfolio hero — list layout** — reworked the hero away from the boxed stat tiles (which left the card feeling empty/blocky) into a two-column layout: a large 40px total value with USD P&L ($ over %) on the left, and a right-aligned stat list — wallet balance, value in SOL, SOL-denominated P&L, lent · APY, and SOL price — with the truncated wallet address + copy under a hairline. The ATH / peak-decay meters stay pinned to the bottom. Token count was dropped in favor of SOL price (which explains the USD-vs-SOL P&L divergence)
 

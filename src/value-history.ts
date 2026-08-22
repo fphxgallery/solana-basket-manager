@@ -19,6 +19,13 @@ export interface ValuePoint {
 let solUsd = 0;
 let lastPriceFetch = 0;
 
+// Sustained-jump tracking: a transient bad quote reverts within a cycle, a real
+// balance change (deposit/withdraw) persists. Hold out-of-band readings until a
+// few consistent ones confirm the new level, then accept it.
+let pendingLevel = 0;
+let pendingCount = 0;
+const OUTLIER_CONFIRM = 3;
+
 // Load persisted history on startup, pruning anything older than the retention window
 export const valueHistory: ValuePoint[] = (() => {
   try {
@@ -68,14 +75,28 @@ export async function recordSnapshot(totalValueSol: number): Promise<void> {
   const now = Date.now();
   const newValueUsd = totalValueSol * usd;
 
-  // Reject outliers: if value jumps >10x from the last point, it's a bad quote
+  // Reject outliers: a >10x jump from the last point is a bad quote — UNLESS it
+  // repeats consistently, which means a real balance change (deposit/withdraw).
   if (valueHistory.length > 0) {
     const last = valueHistory[valueHistory.length - 1].valueUsd;
-    if (last > 0 && (newValueUsd > last * 10 || newValueUsd < last / 10)) {
-      console.warn(`[value-history] rejecting outlier snapshot: $${newValueUsd.toFixed(2)} vs last $${last.toFixed(2)}`);
-      return;
+    const isOutlier = last > 0 && (newValueUsd > last * 10 || newValueUsd < last / 10);
+    if (isOutlier) {
+      // Same ballpark as the last held reading? Count toward confirmation, else restart.
+      if (pendingLevel > 0 && Math.abs(newValueUsd - pendingLevel) / pendingLevel < 0.15) {
+        pendingCount++;
+      } else {
+        pendingLevel = newValueUsd;
+        pendingCount = 1;
+      }
+      if (pendingCount < OUTLIER_CONFIRM) {
+        console.warn(`[value-history] holding outlier snapshot (${pendingCount}/${OUTLIER_CONFIRM}): $${newValueUsd.toFixed(2)} vs last $${last.toFixed(2)}`);
+        return;
+      }
+      console.warn(`[value-history] accepting sustained level change: $${newValueUsd.toFixed(2)} vs last $${last.toFixed(2)}`);
     }
   }
+  pendingLevel = 0;
+  pendingCount = 0;
 
   valueHistory.push({ ts: now, valueUsd: newValueUsd });
 
