@@ -36,8 +36,13 @@ async function refreshBasket() {
   try {
     await refreshHoldings(connection, keypair.publicKey);
     // basketStore.on("holdings") in api.ts handles the SSE broadcast via basketSnapshot()
-    // Record value snapshot for 24h chart (fire-and-forget)
-    recordSnapshot(basketStore.totalValueSol).catch(() => {});
+    // Record value snapshot for the chart (fire-and-forget) — but only when the book
+    // is fully priced and the lend fold is trusted. A token momentarily priced at 0 or
+    // an untrusted lend balance undervalues the total and draws a transient dip.
+    const fullyPriced = basketStore.holdings.length > 0 && basketStore.holdings.every((h) => h.priceSol > 0);
+    if (fullyPriced && !isLendFoldUntrusted()) {
+      recordSnapshot(basketStore.totalValueSol).catch(() => {});
+    }
     // Per-token price/weight log — feeds offline band backtesting
     recordTokenSnapshot(basketStore.holdings);
     // Park excess idle USDC into Jupiter Lend — skip while a rebalance is mid-flight

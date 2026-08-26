@@ -1,5 +1,8 @@
 # Changelog
 
+### v3.8.2
+- **Fix: transient downward spikes in the value chart.** After the v3.8.1 unfreeze, isolated single-cycle dips (e.g. ~$6400 → ~$5900 and back) slipped under the 10× guard, got recorded, and stuck. Two changes: (1) `bot.ts` now skips the snapshot entirely when the book is under-priced — any holding priced 0, or `isLendFoldUntrusted()` — since those undervalue the total and are the usual dip cause; (2) `value-history.ts` replaced the 10× outlier gate with a **4%-move hold-and-confirm**: any >4% single-cycle move is held until a second consistent reading confirms it (real deposits/withdrawals and genuine swings still land, one cycle later; transient bad reads that revert are dropped). Sub-4% moves write through immediately, so normal chart motion isn't delayed. Existing bad points need a one-time cleanup (stop service, despike `data/value-history.json`, start)
+
 ### v3.8.1
 - **Fix: chart frozen after a large deposit/withdrawal.** `recordSnapshot()` rejects any value >10× (or <1/10×) the last point as a bad CoinGecko quote. A big real top-up (~$450 → $6257, ~14×) tripped this on every cycle, so the value chart stuck at the pre-top-up level while the hero showed the new balance. The guard now holds an out-of-band reading and accepts it once 3 consistent readings (within 15% of each other) confirm a sustained level change — real deposits/withdrawals go through after ~3 cycles, transient bad quotes (which revert immediately) are still dropped
 

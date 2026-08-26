@@ -2,7 +2,7 @@
 
 Self-hosted Solana token basket manager. Holds any SPL/Token-2022 tokens at target weights and automatically rebalances the portfolio on drift or schedule via Jupiter swaps. Includes a React dashboard for monitoring and control.
 
-![Version](https://img.shields.io/badge/version-3.8.1-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
+![Version](https://img.shields.io/badge/version-3.8.2-22d3ee) ![Node.js](https://img.shields.io/badge/Node.js-22-green) ![TypeScript](https://img.shields.io/badge/TypeScript-5-blue) ![Solana](https://img.shields.io/badge/Solana-mainnet-purple)
 
 ![Dashboard screenshot](docs/screenshot-v3.1.4.png)
 
@@ -134,6 +134,9 @@ sudo systemctl status basket-manager
 ## Changelog
 
 Recent releases below. Full history in [CHANGELOG.md](CHANGELOG.md).
+
+### v3.8.2
+- **Fix:** transient downward spikes in the value chart. Snapshots are now skipped while the book is under-priced (a token momentarily priced 0, or an untrusted lend fold), and the chart guard tightened from a 10× gate to a 4%-move hold-and-confirm — a suspect single-cycle move is held until a second reading confirms it, so bad reads are smoothed while real moves and deposits still go through
 
 ### v3.8.1
 - **Fix:** the portfolio chart's outlier guard (rejects >10× jumps as bad quotes) also froze the chart after a large real deposit/withdrawal. It now accepts a big jump once 3 consistent readings confirm it's a sustained level change, while still dropping transient bad quotes
